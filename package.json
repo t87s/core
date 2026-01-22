@@ -22,8 +22,17 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
+  "peerDependencies": {
+    "ioredis": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^25.0.10",
+    "ioredis": "^5.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0",
     "vitest": "^2.0.0"
