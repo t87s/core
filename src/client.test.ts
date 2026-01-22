@@ -40,4 +40,31 @@ describe('T87s', () => {
       expect(callCount).toBe(2); // Different args
     });
   });
+
+  describe('query - stampede protection', () => {
+    it('should coalesce concurrent requests for same key', async () => {
+      let callCount = 0;
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          callCount++;
+          await new Promise((r) => setTimeout(r, 50));
+          return { id, name: 'Alice' };
+        },
+      }));
+
+      // Fire 10 concurrent requests
+      const promises = Array.from({ length: 10 }, () => getUser('123'));
+      const results = await Promise.all(promises);
+
+      // All should get same result
+      for (const result of results) {
+        expect(result).toEqual({ id: '123', name: 'Alice' });
+      }
+
+      // But only one factory call
+      expect(callCount).toBe(1);
+    });
+  });
 });

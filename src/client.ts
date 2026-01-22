@@ -26,6 +26,7 @@ export class T87s {
   private defaultTtl: number;
   private defaultGrace: number | false;
   private queryCounter = 0;
+  private inFlight = new Map<string, Promise<unknown>>();
 
   constructor(options: T87sOptions) {
     this.adapter = options.adapter;
@@ -44,28 +45,50 @@ export class T87s {
     return async (...args: TArgs): Promise<TResult> => {
       const config = factory(...args);
       const cacheKey = generateCacheKey(this.prefix, fnName, args);
-      const now = Date.now();
 
-      // Check cache
-      const cached = await this.adapter.get<TResult>(cacheKey);
-      if (cached && cached.expiresAt > now) {
-        return cached.value;
+      // Check for in-flight request (stampede protection)
+      const inFlight = this.inFlight.get(cacheKey);
+      if (inFlight) {
+        return inFlight as Promise<TResult>;
       }
 
-      // Fetch and cache
-      const ttl = parseDuration(config.ttl ?? this.defaultTtl);
-      const value = await config.fn();
+      // Create promise that checks cache then fetches if needed
+      const promise = this.getOrFetch<TResult>(cacheKey, config);
+      this.inFlight.set(cacheKey, promise);
 
-      const entry: CacheEntry<TResult> = {
-        value,
-        tags: config.tags.map((t) => t as unknown as string[]),
-        createdAt: now,
-        expiresAt: now + ttl,
-        graceUntil: null,
-      };
-
-      await this.adapter.set(cacheKey, entry);
-      return value;
+      try {
+        return await promise;
+      } finally {
+        this.inFlight.delete(cacheKey);
+      }
     };
+  }
+
+  private async getOrFetch<TResult>(
+    cacheKey: string,
+    config: QueryConfig<TResult>
+  ): Promise<TResult> {
+    const now = Date.now();
+
+    // Check cache
+    const cached = await this.adapter.get<TResult>(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    // Fetch and cache
+    const ttl = parseDuration(config.ttl ?? this.defaultTtl);
+    const value = await config.fn();
+
+    const entry: CacheEntry<TResult> = {
+      value,
+      tags: config.tags.map((t) => t as unknown as string[]),
+      createdAt: now,
+      expiresAt: now + ttl,
+      graceUntil: null,
+    };
+
+    await this.adapter.set(cacheKey, entry);
+    return value;
   }
 }
