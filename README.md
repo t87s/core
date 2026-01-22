@@ -34,6 +34,25 @@ const t87s = new T87s({
 });
 ```
 
+### Cloud Adapter (Managed Service)
+
+```typescript
+import { T87s, CloudAdapter, defineTags } from '@t87s/core';
+
+const t87s = new T87s({
+  adapter: new CloudAdapter({
+    apiKey: process.env.T87S_API_KEY!,
+    baseUrl: 'https://api.t87s.dev', // optional, defaults to production
+  }),
+});
+```
+
+The Cloud Adapter provides:
+- Zero infrastructure to manage
+- Strong consistency via Durable Objects
+- Global edge caching via Cloudflare KV
+- ~45ms round-trip latency for cache reads
+
 ## Define Tags
 
 ```typescript
