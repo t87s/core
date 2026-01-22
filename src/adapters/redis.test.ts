@@ -157,4 +157,31 @@ describe('RedisAdapter', () => {
       expect(mockRedis.set).toHaveBeenCalledWith('t87s:t:user:a\\:b', '1000');
     });
   });
+
+  describe('clear', () => {
+    it('should scan and delete all keys with prefix', async () => {
+      // First scan returns some keys and cursor
+      mockRedis.scan.mockResolvedValueOnce(['5', ['t87s:c:key1', 't87s:t:user:1']]);
+      // Second scan returns more keys and cursor 0 (done)
+      mockRedis.scan.mockResolvedValueOnce(['0', ['t87s:c:key2']]);
+      mockRedis.del.mockResolvedValue(1);
+
+      const adapter = new RedisAdapter({ client: mockRedis as any });
+      await adapter.clear();
+
+      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 't87s:*', 'COUNT', 1000);
+      expect(mockRedis.scan).toHaveBeenCalledWith('5', 'MATCH', 't87s:*', 'COUNT', 1000);
+      expect(mockRedis.del).toHaveBeenCalledWith('t87s:c:key1', 't87s:t:user:1');
+      expect(mockRedis.del).toHaveBeenCalledWith('t87s:c:key2');
+    });
+
+    it('should handle empty cache', async () => {
+      mockRedis.scan.mockResolvedValueOnce(['0', []]);
+
+      const adapter = new RedisAdapter({ client: mockRedis as any });
+      await adapter.clear();
+
+      expect(mockRedis.del).not.toHaveBeenCalled();
+    });
+  });
 });

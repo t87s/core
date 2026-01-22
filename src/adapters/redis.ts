@@ -68,7 +68,23 @@ export class RedisAdapter implements StorageAdapter {
   }
 
   async clear(): Promise<void> {
-    throw new Error('Not implemented');
+    const pattern = `${this.prefix}:*`;
+    let cursor = '0';
+
+    do {
+      const [nextCursor, keys] = await this.client.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        1000
+      );
+      cursor = nextCursor;
+
+      if (keys.length > 0) {
+        await this.client.del(...keys);
+      }
+    } while (cursor !== '0');
   }
 
   async disconnect(): Promise<void> {
