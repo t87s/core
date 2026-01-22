@@ -79,15 +79,32 @@ export class T87s {
     };
   }
 
-  private async invalidateTag(tag: string[], timestamp: number, _exact: boolean): Promise<void> {
-    await this.adapter.setTagInvalidationTime(tag, timestamp);
+  private async invalidateTag(tag: string[], timestamp: number, exact: boolean): Promise<void> {
+    if (exact) {
+      // For exact mode, add a suffix that won't match prefixes
+      const exactTag = [...tag, '__exact__'];
+      await this.adapter.setTagInvalidationTime(exactTag, timestamp);
+    } else {
+      await this.adapter.setTagInvalidationTime(tag, timestamp);
+    }
   }
 
   private async isEntryStale(entry: CacheEntry<unknown>): Promise<boolean> {
-    for (const tag of entry.tags) {
-      const invalidationTime = await this.adapter.getTagInvalidationTime(tag);
-      if (invalidationTime !== null && invalidationTime >= entry.createdAt) {
+    for (const entryTag of entry.tags) {
+      // Check exact invalidation (with marker)
+      const exactTag = [...entryTag, '__exact__'];
+      const exactInvalidation = await this.adapter.getTagInvalidationTime(exactTag);
+      if (exactInvalidation !== null && exactInvalidation >= entry.createdAt) {
         return true;
+      }
+
+      // Check prefix invalidations (all possible parent prefixes)
+      for (let len = 1; len <= entryTag.length; len++) {
+        const prefix = entryTag.slice(0, len);
+        const invalidation = await this.adapter.getTagInvalidationTime(prefix);
+        if (invalidation !== null && invalidation >= entry.createdAt) {
+          return true;
+        }
       }
     }
     return false;

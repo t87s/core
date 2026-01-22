@@ -103,4 +103,90 @@ describe('T87s', () => {
       expect(callCount).toBe(2);
     });
   });
+
+  describe('prefix matching', () => {
+    it('should invalidate child tags when parent is invalidated', async () => {
+      let userCallCount = 0;
+      let postsCallCount = 0;
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          userCallCount++;
+          return { id, name: 'Alice' };
+        },
+      }));
+
+      const getUserPosts = t87s.query((id: string) => ({
+        tags: [tags.userPosts(id)],
+        fn: async () => {
+          postsCallCount++;
+          return [{ id: '1', title: 'Post 1' }];
+        },
+      }));
+
+      const updateUser = t87s.mutation(async (id: string) => {
+        return { result: { success: true }, invalidates: [tags.user(id)] };
+      });
+
+      // Cache both
+      await getUser('123');
+      await getUserPosts('123');
+      expect(userCallCount).toBe(1);
+      expect(postsCallCount).toBe(1);
+
+      // Verify cached
+      await getUser('123');
+      await getUserPosts('123');
+      expect(userCallCount).toBe(1);
+      expect(postsCallCount).toBe(1);
+
+      // Invalidate user tag - should also invalidate userPosts
+      await updateUser('123');
+
+      // Both should refetch
+      await getUser('123');
+      await getUserPosts('123');
+      expect(userCallCount).toBe(2);
+      expect(postsCallCount).toBe(2);
+    });
+
+    it('should NOT invalidate child tags when exact=true', async () => {
+      let userCallCount = 0;
+      let postsCallCount = 0;
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          userCallCount++;
+          return { id, name: 'Alice' };
+        },
+      }));
+
+      const getUserPosts = t87s.query((id: string) => ({
+        tags: [tags.userPosts(id)],
+        fn: async () => {
+          postsCallCount++;
+          return [{ id: '1', title: 'Post 1' }];
+        },
+      }));
+
+      const updateUserExact = t87s.mutation(async (id: string) => {
+        return { result: { success: true }, invalidates: [tags.user(id)], exact: true };
+      });
+
+      // Cache both
+      await getUser('123');
+      await getUserPosts('123');
+
+      // Invalidate with exact=true
+      await updateUserExact('123');
+
+      // Only user should refetch, not posts
+      await getUser('123');
+      await getUserPosts('123');
+      expect(userCallCount).toBe(2);
+      expect(postsCallCount).toBe(1); // Still 1!
+    });
+  });
 });
