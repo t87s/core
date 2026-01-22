@@ -5,7 +5,12 @@ export { T87s } from './client.js';
 export { defineTags, isTagPrefix, serializeTag, deserializeTag } from './tags.js';
 
 // Adapters
-export { MemoryAdapter, type MemoryAdapterOptions } from './adapters/index.js';
+export {
+  MemoryAdapter,
+  type MemoryAdapterOptions,
+  RedisAdapter,
+  type RedisAdapterOptions,
+} from './adapters/index.js';
 
 // Types
 export type {
