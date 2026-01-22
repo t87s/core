@@ -25,5 +25,5 @@ export function parseDuration(value: Duration): number {
   }
 
   const [, amount, unit] = match;
-  return parseInt(amount, 10) * UNITS[unit];
+  return parseInt(amount!, 10) * UNITS[unit!]!;
 }
