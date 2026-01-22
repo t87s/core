@@ -118,26 +118,62 @@ export class T87s {
 
     // Check cache
     const cached = await this.adapter.get<TResult>(cacheKey);
-    if (cached && cached.expiresAt > now) {
+    if (cached) {
       const isStale = await this.isEntryStale(cached);
-      if (!isStale) {
+
+      if (!isStale && cached.expiresAt > now) {
+        // Fresh hit
+        return cached.value;
+      }
+
+      // Check grace period
+      if (cached.graceUntil !== null && cached.graceUntil > now) {
+        // Stale but within grace - return stale, refresh in background
+        this.refreshInBackground(cacheKey, config);
         return cached.value;
       }
     }
 
-    // Fetch and cache
+    // Outside grace or no cache - fetch synchronously
+    return await this.fetchAndCache(cacheKey, config, cached ?? undefined);
+  }
+
+  private async fetchAndCache<TResult>(
+    cacheKey: string,
+    config: QueryConfig<TResult>,
+    staleEntry?: CacheEntry<TResult>
+  ): Promise<TResult> {
     const ttl = parseDuration(config.ttl ?? this.defaultTtl);
-    const value = await config.fn();
+    const grace = config.grace === false || config.grace === undefined
+      ? this.defaultGrace
+      : parseDuration(config.grace);
+    const now = Date.now();
 
-    const entry: CacheEntry<TResult> = {
-      value,
-      tags: config.tags.map((t) => t as unknown as string[]),
-      createdAt: now,
-      expiresAt: now + ttl,
-      graceUntil: null,
-    };
+    try {
+      const value = await config.fn();
 
-    await this.adapter.set(cacheKey, entry);
-    return value;
+      const entry: CacheEntry<TResult> = {
+        value,
+        tags: config.tags.map((t) => t as unknown as string[]),
+        createdAt: now,
+        expiresAt: now + ttl,
+        graceUntil: grace === false ? null : now + ttl + grace,
+      };
+
+      await this.adapter.set(cacheKey, entry);
+      return value;
+    } catch (error) {
+      // If we have a graced entry, return it
+      if (staleEntry && staleEntry.graceUntil !== null && staleEntry.graceUntil > now) {
+        return staleEntry.value;
+      }
+      throw error;
+    }
+  }
+
+  private refreshInBackground<TResult>(cacheKey: string, config: QueryConfig<TResult>): void {
+    this.fetchAndCache(cacheKey, config).catch(() => {
+      // Ignore errors - graced value continues to be served
+    });
   }
 }

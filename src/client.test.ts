@@ -189,4 +189,70 @@ describe('T87s', () => {
       expect(postsCallCount).toBe(1); // Still 1!
     });
   });
+
+  describe('grace periods', () => {
+    it('should serve stale data when factory fails during grace', async () => {
+      let callCount = 0;
+      let shouldFail = false;
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        ttl: 50, // 50ms as number
+        grace: '1h',
+        fn: async () => {
+          callCount++;
+          if (shouldFail) throw new Error('DB down');
+          return { id, name: `User ${callCount}` };
+        },
+      }));
+
+      // First call succeeds
+      const result1 = await getUser('123');
+      expect(result1.name).toBe('User 1');
+
+      // Wait for TTL to expire
+      await new Promise((r) => setTimeout(r, 60));
+
+      // Make factory fail
+      shouldFail = true;
+
+      // Should return stale data
+      const result2 = await getUser('123');
+      expect(result2.name).toBe('User 1'); // Stale value
+      expect(callCount).toBe(2); // Factory was called but failed
+    });
+
+    it('should background refresh when within grace period', async () => {
+      let callCount = 0;
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        ttl: 50, // 50ms as number
+        grace: '1h',
+        fn: async () => {
+          callCount++;
+          return { id, name: `User ${callCount}` };
+        },
+      }));
+
+      // First call
+      await getUser('123');
+      expect(callCount).toBe(1);
+
+      // Wait for TTL to expire
+      await new Promise((r) => setTimeout(r, 60));
+
+      // Should return stale immediately, refresh in background
+      const result = await getUser('123');
+      expect(result.name).toBe('User 1'); // Stale value returned immediately
+
+      // Wait for background refresh
+      await new Promise((r) => setTimeout(r, 10));
+      expect(callCount).toBe(2); // Background refresh happened
+
+      // Next call should get fresh value
+      const result2 = await getUser('123');
+      expect(result2.name).toBe('User 2');
+    });
+  });
 });
