@@ -106,4 +106,15 @@ describe('RedisAdapter', () => {
       );
     });
   });
+
+  describe('delete', () => {
+    it('should delete cache entry', async () => {
+      mockRedis.del.mockResolvedValueOnce(1);
+      const adapter = new RedisAdapter({ client: mockRedis as any });
+
+      await adapter.delete('key1');
+
+      expect(mockRedis.del).toHaveBeenCalledWith('t87s:c:key1');
+    });
+  });
 });

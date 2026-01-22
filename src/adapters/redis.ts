@@ -52,7 +52,7 @@ export class RedisAdapter implements StorageAdapter {
   }
 
   async delete(key: string): Promise<void> {
-    throw new Error('Not implemented');
+    await this.client.del(this.cacheKey(key));
   }
 
   async getTagInvalidationTime(tag: string[]): Promise<number | null> {
