@@ -56,11 +56,15 @@ export class RedisAdapter implements StorageAdapter {
   }
 
   async getTagInvalidationTime(tag: string[]): Promise<number | null> {
-    throw new Error('Not implemented');
+    const data = await this.client.get(this.tagKey(tag));
+    if (data === null) {
+      return null;
+    }
+    return parseInt(data, 10);
   }
 
   async setTagInvalidationTime(tag: string[], timestamp: number): Promise<void> {
-    throw new Error('Not implemented');
+    await this.client.set(this.tagKey(tag), timestamp.toString());
   }
 
   async clear(): Promise<void> {

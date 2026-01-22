@@ -117,4 +117,44 @@ describe('RedisAdapter', () => {
       expect(mockRedis.del).toHaveBeenCalledWith('t87s:c:key1');
     });
   });
+
+  describe('tag invalidation', () => {
+    it('should return null for missing tag', async () => {
+      mockRedis.get.mockResolvedValueOnce(null);
+      const adapter = new RedisAdapter({ client: mockRedis as any });
+
+      const result = await adapter.getTagInvalidationTime(['user', '1']);
+
+      expect(result).toBeNull();
+      expect(mockRedis.get).toHaveBeenCalledWith('t87s:t:user:1');
+    });
+
+    it('should return timestamp for existing tag', async () => {
+      mockRedis.get.mockResolvedValueOnce('1705936800000');
+      const adapter = new RedisAdapter({ client: mockRedis as any });
+
+      const result = await adapter.getTagInvalidationTime(['user', '1']);
+
+      expect(result).toBe(1705936800000);
+    });
+
+    it('should set tag invalidation timestamp', async () => {
+      mockRedis.set.mockResolvedValueOnce('OK');
+      const adapter = new RedisAdapter({ client: mockRedis as any });
+
+      await adapter.setTagInvalidationTime(['user', '1'], 1705936800000);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('t87s:t:user:1', '1705936800000');
+    });
+
+    it('should handle tags with special characters', async () => {
+      mockRedis.set.mockResolvedValueOnce('OK');
+      const adapter = new RedisAdapter({ client: mockRedis as any });
+
+      await adapter.setTagInvalidationTime(['user', 'a:b'], 1000);
+
+      // Colon should be escaped
+      expect(mockRedis.set).toHaveBeenCalledWith('t87s:t:user:a\\:b', '1000');
+    });
+  });
 });
