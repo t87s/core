@@ -190,6 +190,50 @@ describe('T87s', () => {
     });
   });
 
+  describe('manual invalidation', () => {
+    it('should allow manual tag invalidation', async () => {
+      let callCount = 0;
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          callCount++;
+          return { id, name: `User ${callCount}` };
+        },
+      }));
+
+      await getUser('123');
+      expect(callCount).toBe(1);
+
+      await t87s.invalidate([tags.user('123')]);
+
+      await getUser('123');
+      expect(callCount).toBe(2);
+    });
+  });
+
+  describe('clear', () => {
+    it('should clear all cached data', async () => {
+      let callCount = 0;
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          callCount++;
+          return { id };
+        },
+      }));
+
+      await getUser('123');
+      expect(callCount).toBe(1);
+
+      await t87s.clear();
+
+      await getUser('123');
+      expect(callCount).toBe(2);
+    });
+  });
+
   describe('grace periods', () => {
     it('should serve stale data when factory fails during grace', async () => {
       let callCount = 0;

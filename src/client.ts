@@ -1,4 +1,4 @@
-import type { T87sOptions, StorageAdapter, QueryConfig, MutationResult, CacheEntry } from './types.js';
+import type { T87sOptions, StorageAdapter, QueryConfig, MutationResult, CacheEntry, Tag } from './types.js';
 import { parseDuration } from './duration.js';
 
 const DEFAULT_TTL = '30s';
@@ -175,5 +175,29 @@ export class T87s {
     this.fetchAndCache(cacheKey, config).catch(() => {
       // Ignore errors - graced value continues to be served
     });
+  }
+
+  /**
+   * Manually invalidate tags.
+   */
+  async invalidate(tags: Tag[], exact = false): Promise<void> {
+    const now = Date.now();
+    for (const tag of tags) {
+      await this.invalidateTag(tag as unknown as string[], now, exact);
+    }
+  }
+
+  /**
+   * Clear all cached data.
+   */
+  async clear(): Promise<void> {
+    await this.adapter.clear();
+  }
+
+  /**
+   * Disconnect the adapter.
+   */
+  async disconnect(): Promise<void> {
+    await this.adapter.disconnect();
   }
 }
