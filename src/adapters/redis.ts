@@ -28,11 +28,27 @@ export class RedisAdapter implements StorageAdapter {
   }
 
   async get<T>(key: string): Promise<CacheEntry<T> | null> {
-    throw new Error('Not implemented');
+    const data = await this.client.get(this.cacheKey(key));
+    if (data === null) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(data) as CacheEntry<T>;
+    } catch {
+      // Invalid JSON - treat as cache miss
+      return null;
+    }
   }
 
   async set<T>(key: string, entry: CacheEntry<T>): Promise<void> {
-    throw new Error('Not implemented');
+    const expireAt = entry.graceUntil ?? entry.expiresAt;
+    await this.client.set(
+      this.cacheKey(key),
+      JSON.stringify(entry),
+      'PXAT',
+      expireAt
+    );
   }
 
   async delete(key: string): Promise<void> {
