@@ -1,4 +1,4 @@
-import type { T87sOptions, StorageAdapter, QueryConfig, CacheEntry } from './types.js';
+import type { T87sOptions, StorageAdapter, QueryConfig, MutationResult, CacheEntry } from './types.js';
 import { parseDuration } from './duration.js';
 
 const DEFAULT_TTL = '30s';
@@ -64,6 +64,35 @@ export class T87s {
     };
   }
 
+  mutation<TArgs extends unknown[], TResult>(
+    fn: (...args: TArgs) => Promise<MutationResult<TResult>>
+  ): (...args: TArgs) => Promise<TResult> {
+    return async (...args: TArgs): Promise<TResult> => {
+      const { result, invalidates, exact = false } = await fn(...args);
+      const now = Date.now();
+
+      for (const tag of invalidates) {
+        await this.invalidateTag(tag as unknown as string[], now, exact);
+      }
+
+      return result;
+    };
+  }
+
+  private async invalidateTag(tag: string[], timestamp: number, _exact: boolean): Promise<void> {
+    await this.adapter.setTagInvalidationTime(tag, timestamp);
+  }
+
+  private async isEntryStale(entry: CacheEntry<unknown>): Promise<boolean> {
+    for (const tag of entry.tags) {
+      const invalidationTime = await this.adapter.getTagInvalidationTime(tag);
+      if (invalidationTime !== null && invalidationTime >= entry.createdAt) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private async getOrFetch<TResult>(
     cacheKey: string,
     config: QueryConfig<TResult>
@@ -73,7 +102,10 @@ export class T87s {
     // Check cache
     const cached = await this.adapter.get<TResult>(cacheKey);
     if (cached && cached.expiresAt > now) {
-      return cached.value;
+      const isStale = await this.isEntryStale(cached);
+      if (!isStale) {
+        return cached.value;
+      }
     }
 
     // Fetch and cache
