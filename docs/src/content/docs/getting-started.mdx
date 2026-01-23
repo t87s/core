@@ -1,0 +1,65 @@
+---
+title: Getting Started
+description: Install t87s and create your first cached query
+---
+
+## Installation
+
+```bash
+npm install @t87s/core
+```
+
+## Basic Setup
+
+```typescript
+import { T87s, MemoryAdapter, defineTags } from '@t87s/core';
+
+// 1. Define your tag patterns
+const tags = defineTags({
+  user: (id: string) => ['user', id],
+  userPosts: (id: string) => ['user', id, 'posts'],
+});
+
+// 2. Initialize t87s
+const t87s = new T87s({
+  adapter: new MemoryAdapter(),
+});
+
+// 3. Create cached queries
+const getUser = t87s.query((id: string) => ({
+  tags: [tags.user(id)],
+  ttl: '10m',
+  fn: () => db.users.findById(id),
+}));
+
+// 4. Create mutations that invalidate
+const updateUser = t87s.mutation(async (id: string, data: UserUpdate) => {
+  const user = await db.users.update(id, data);
+  return {
+    result: user,
+    invalidates: [tags.user(id)], // Also invalidates userPosts via prefix!
+  };
+});
+```
+
+## Usage
+
+```typescript
+// First call: cache miss, fetches from DB
+const user = await getUser('123');
+
+// Second call: cache hit
+const userAgain = await getUser('123');
+
+// Update: invalidates user:123 AND user:123:posts
+await updateUser('123', { name: 'New Name' });
+
+// Next call: cache miss (was invalidated)
+const freshUser = await getUser('123');
+```
+
+## Next Steps
+
+- Learn about [Tags](/concepts/tags/) and how to structure them
+- Understand [Prefix Matching](/concepts/prefix-matching/) for hierarchical invalidation
+- Choose an [Adapter](/guides/adapters/) for your environment

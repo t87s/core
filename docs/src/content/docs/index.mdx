@@ -1,0 +1,32 @@
+---
+title: t87s
+description: Declarative cache invalidation for TypeScript
+template: splash
+hero:
+  tagline: Cache that tells you when it's wrong
+  actions:
+    - text: Get Started
+      link: /getting-started/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/t87s/core
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="Type-safe tags" icon="pencil">
+    `defineTags()` gives you autocomplete and compile-time checking.
+  </Card>
+  <Card title="Prefix matching" icon="random">
+    Invalidate `user:123` and `user:123:posts` is also invalidated.
+  </Card>
+  <Card title="Declarative" icon="setting">
+    Return `invalidates: [tags.user(id)]` from mutations. No manual cache.delete().
+  </Card>
+  <Card title="Intelligence" icon="warning">
+    Cloud adapter detects when cached data diverges from reality.
+  </Card>
+</CardGrid>
