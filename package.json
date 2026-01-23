@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "demo": "cd examples/demo && pnpm start"
   },
   "peerDependencies": {
     "ioredis": "^5.0.0"
