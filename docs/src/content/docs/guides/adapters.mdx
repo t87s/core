@@ -1,0 +1,67 @@
+---
+title: Adapters
+description: Choosing the right storage adapter
+---
+
+t87s supports three adapters for different environments.
+
+## MemoryAdapter
+
+For local development. Single-process, no persistence.
+
+```typescript
+import { MemoryAdapter } from '@t87s/core';
+
+const t87s = new T87s({
+  adapter: new MemoryAdapter(),
+});
+```
+
+**Use when:** Local development, testing, single-process apps.
+
+## RedisAdapter
+
+For self-hosted production. Requires Redis (or Upstash).
+
+```typescript
+import { RedisAdapter } from '@t87s/core';
+import { Redis } from '@upstash/redis';
+
+const t87s = new T87s({
+  adapter: new RedisAdapter({
+    client: new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    }),
+  }),
+});
+```
+
+**Use when:** Multi-process, self-hosted, need persistence.
+
+## CloudAdapter
+
+For managed production. Uses t87s Cloud.
+
+```typescript
+import { CloudAdapter } from '@t87s/core';
+
+const t87s = new T87s({
+  adapter: new CloudAdapter({
+    apiKey: process.env.T87S_API_KEY,
+    verify: async (key, cached) => fetchFresh(key), // For staleness detection
+    verifyPercent: 0.05,
+  }),
+});
+```
+
+**Use when:** Want managed service, staleness detection, multi-region.
+
+## Comparison
+
+| Feature | Memory | Redis | Cloud |
+|---------|--------|-------|-------|
+| Setup | None | Redis server | API key |
+| Multi-process | ❌ | ✅ | ✅ |
+| Persistence | ❌ | ✅ | ✅ |
+| Staleness detection | ❌ | ❌ | ✅ |

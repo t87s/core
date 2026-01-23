@@ -1,0 +1,90 @@
+---
+title: API Reference
+description: Complete API documentation for t87s
+---
+
+## T87s Class
+
+### Constructor
+
+```typescript
+new T87s(options: T87sOptions)
+```
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `adapter` | `StorageAdapter` | required | Storage backend |
+| `prefix` | `string` | `'t87s'` | Key prefix for namespacing |
+| `defaultTtl` | `string \| number` | `'30s'` | Default TTL for queries |
+| `defaultGrace` | `string \| number \| false` | `false` | Default grace period |
+
+### query()
+
+```typescript
+t87s.query<TArgs, TResult>(
+  factory: (...args: TArgs) => QueryConfig<TResult>
+): (...args: TArgs) => Promise<TResult>
+```
+
+Creates a cached query function.
+
+**QueryConfig:**
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `tags` | `Tag[]` | ✅ | Cache dependencies |
+| `fn` | `() => Promise<T>` | ✅ | Data fetcher |
+| `ttl` | `string \| number` | ❌ | Time to live |
+| `grace` | `string \| number \| false` | ❌ | Grace period |
+
+### mutation()
+
+```typescript
+t87s.mutation<TArgs, TResult>(
+  fn: (...args: TArgs) => Promise<MutationResult<TResult>>
+): (...args: TArgs) => Promise<TResult>
+```
+
+Creates a mutation that invalidates cache.
+
+**MutationResult:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `result` | `T` | ✅ | Return value |
+| `invalidates` | `Tag[]` | ✅ | Tags to invalidate |
+| `exact` | `boolean` | ❌ | Disable prefix matching |
+
+### invalidate()
+
+```typescript
+t87s.invalidate(tags: Tag[], exact?: boolean): Promise<void>
+```
+
+Manually invalidate tags without a mutation.
+
+### clear()
+
+```typescript
+t87s.clear(): Promise<void>
+```
+
+Clear all cached data.
+
+## defineTags()
+
+```typescript
+defineTags<T extends TagDefinitions>(defs: T): TagFactories<T>
+```
+
+Creates typed tag factories.
+
+```typescript
+const tags = defineTags({
+  user: (id: string) => ['user', id],
+});
+
+const tag = tags.user('123'); // Type: Tag
+```

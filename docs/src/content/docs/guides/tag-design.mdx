@@ -1,0 +1,46 @@
+---
+title: Tag Design
+description: Patterns for structuring your cache tags
+---
+
+Good tag design makes invalidation natural. Bad tag design leads to stale data.
+
+## Hierarchical Structure
+
+Structure tags from general to specific:
+
+```typescript
+// Good: hierarchical
+const tags = defineTags({
+  org: (id: string) => ['org', id],
+  orgTeams: (id: string) => ['org', id, 'teams'],
+  team: (orgId: string, teamId: string) => ['org', orgId, 'team', teamId],
+  teamMembers: (orgId: string, teamId: string) => ['org', orgId, 'team', teamId, 'members'],
+});
+
+// Invalidate org → invalidates all teams, members
+```
+
+## Avoid Flat Tags
+
+```typescript
+// Bad: flat (no prefix matching benefit)
+const tags = defineTags({
+  user: (id: string) => ['user', id],
+  posts: (userId: string) => ['posts', userId], // Not under 'user'
+});
+
+// Invalidating user doesn't invalidate posts!
+```
+
+## Include All Relevant IDs
+
+```typescript
+// Good: includes both IDs
+const tags = defineTags({
+  postComments: (postId: string, authorId: string) =>
+    ['post', postId, 'comments', 'author', authorId],
+});
+
+// Can invalidate by post OR by author
+```
