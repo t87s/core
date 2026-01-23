@@ -1,0 +1,50 @@
+---
+title: Tags
+description: Understanding cache tags in t87s
+---
+
+Tags are typed identifiers that link cache entries to the data they depend on.
+
+## Defining Tags
+
+Use `defineTags()` to create a typed tag factory:
+
+```typescript
+const tags = defineTags({
+  user: (id: string) => ['user', id],
+  userPosts: (id: string) => ['user', id, 'posts'],
+  userSettings: (id: string) => ['user', id, 'settings'],
+  team: (id: string) => ['team', id],
+});
+```
+
+Each function returns a tag array. The return type is opaque—you can only create valid tags through `defineTags()`.
+
+## Using Tags
+
+Attach tags to queries:
+
+```typescript
+const getUser = t87s.query((id: string) => ({
+  tags: [tags.user(id)],
+  fn: () => db.users.findById(id),
+}));
+```
+
+Return tags from mutations:
+
+```typescript
+const updateUser = t87s.mutation(async (id, data) => {
+  const user = await db.users.update(id, data);
+  return {
+    result: user,
+    invalidates: [tags.user(id)],
+  };
+});
+```
+
+## Why Arrays?
+
+Tags are arrays to support hierarchical prefix matching. `['user', '123', 'posts']` is a child of `['user', '123']`.
+
+See [Prefix Matching](/concepts/prefix-matching/) for details.
