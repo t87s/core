@@ -1,8 +1,25 @@
-import type { StorageAdapter, CacheEntry } from '../types.js';
+import type { StorageAdapter, CacheEntry, VerifyCallback } from '../types.js';
 
 export interface CloudAdapterOptions {
   apiKey: string;
   baseUrl?: string;
+  /** Callback to fetch fresh data for verification */
+  verify?: VerifyCallback;
+  /** Sampling rate for verification (0.0-1.0), default 0.05 (5%) */
+  verifyPercent?: number;
+}
+
+/**
+ * Simple hash function for comparing values.
+ */
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(16);
 }
 
 /**
@@ -11,10 +28,53 @@ export interface CloudAdapterOptions {
 export class CloudAdapter implements StorageAdapter {
   private apiKey: string;
   private baseUrl: string;
+  private verify?: VerifyCallback;
+  private verifyPercent: number;
 
   constructor(options: CloudAdapterOptions) {
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl ?? 'https://t87s-cloud.mike-solomon.workers.dev';
+    this.verify = options.verify;
+    this.verifyPercent = options.verifyPercent ?? 0.05;
+  }
+
+  /**
+   * Determines if this request should be sampled for verification.
+   */
+  private shouldVerify(): boolean {
+    if (!this.verify) return false;
+    if (this.verifyPercent <= 0) return false;
+    if (this.verifyPercent >= 1) return true;
+    return Math.random() < this.verifyPercent;
+  }
+
+  /**
+   * Runs background verification and sends report to /v1/verify.
+   * Errors are silently caught to avoid affecting the main request.
+   */
+  private async runVerification<T>(key: string, cachedValue: T): Promise<void> {
+    try {
+      if (!this.verify) return;
+
+      const freshValue = await this.verify(key, cachedValue);
+
+      const cachedHash = simpleHash(JSON.stringify(cachedValue));
+      const freshHash = simpleHash(JSON.stringify(freshValue));
+      const isStale = cachedHash !== freshHash;
+
+      // Fire-and-forget report to /v1/verify
+      this.request<{ ok: true }>('/v1/verify', {
+        key,
+        cachedHash,
+        freshHash,
+        isStale,
+        timestamp: Date.now(),
+      }).catch(() => {
+        // Silently ignore errors in reporting
+      });
+    } catch {
+      // Silently catch verification errors
+    }
   }
 
   private async request<T>(endpoint: string, body: unknown): Promise<T> {
@@ -40,7 +100,15 @@ export class CloudAdapter implements StorageAdapter {
       '/v1/cache/get',
       { key }
     );
-    return response.entry as CacheEntry<T> | null;
+    const entry = response.entry as CacheEntry<T> | null;
+
+    // On cache hit, potentially run background verification
+    if (entry !== null && this.shouldVerify()) {
+      // Don't await - run in background
+      this.runVerification(key, entry.value);
+    }
+
+    return entry;
   }
 
   async set<T>(key: string, entry: CacheEntry<T>): Promise<void> {

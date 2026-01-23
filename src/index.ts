@@ -10,6 +10,8 @@ export {
   type MemoryAdapterOptions,
   RedisAdapter,
   type RedisAdapterOptions,
+  CloudAdapter,
+  type CloudAdapterOptions,
 } from './adapters/index.js';
 
 // Types
@@ -21,6 +23,7 @@ export type {
   QueryConfig,
   MutationResult,
   StorageAdapter,
+  VerifyCallback,
 } from './types.js';
 
 // Utilities
