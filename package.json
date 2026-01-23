@@ -21,7 +21,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "demo": "cd examples/demo && pnpm start"
+    "demo": "cd examples/demo && pnpm start",
+    "docs:dev": "cd docs && pnpm dev",
+    "docs:build": "cd docs && pnpm build"
   },
   "peerDependencies": {
     "ioredis": "^5.0.0"
