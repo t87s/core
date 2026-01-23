@@ -13,11 +13,13 @@ const tags = defineTags({
 });
 
 // Create t87s client with memory adapter
+// Note: Grace periods disabled for demo clarity - we want to show clean MISS after invalidation
+// In production, grace periods provide resilience by serving stale data while refreshing
 const cache = new T87s({
   adapter: new MemoryAdapter(),
   prefix: 'demo',
   defaultTtl: '5m',
-  defaultGrace: '1m',
+  defaultGrace: false, // Disable grace for demo - shows clear HIT/MISS behavior
 });
 
 // Track cache state for demo output
