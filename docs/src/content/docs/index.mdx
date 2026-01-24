@@ -14,19 +14,19 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+## Why do I need this lib?
 
-<CardGrid stagger>
-  <Card title="Type-safe tags" icon="pencil">
-    `defineTags()` gives you autocomplete and compile-time checking.
-  </Card>
-  <Card title="Prefix matching" icon="random">
-    Invalidate `user:123` and `user:123:posts` is also invalidated.
-  </Card>
-  <Card title="Declarative" icon="setting">
-    Return `invalidates: [tags.user(id)]` from mutations. No manual cache.delete().
-  </Card>
-  <Card title="Intelligence" icon="warning">
-    Cloud adapter detects when cached data diverges from reality.
-  </Card>
-</CardGrid>
+Perhaps you don't. If your app doesn't make many DB or API calls, or if those calls are reasonably fast, you're probably fine.
+
+Otherwise, consider using t87s. At a minimum, you can plug it into Redis and get an amazing caching experience with a delightful DX. And for devs with little patience and an appetite for speed, you can use our managed cloud adapter. Not only is it 4x faster than a Redis-based caching strategy, but it offers cache auto-tuning via MCP based on time-series analysis of your cache.
+
+## The name
+
+The name **t87s** comes from a shortening of the oft-quoted phrase:
+
+> "There are only two hard things in Computer Science: cache invalidation and naming things."
+> — Phil Karlton
+
+Who wants to type that all the time? It's way easier to type `t86s`. And because no name would be complete without an off-by-one error, `t87s`.
+
+Now, be good and [read the docs](/getting-started/).
