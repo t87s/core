@@ -10,6 +10,8 @@ export {
   type MemoryAdapterOptions,
   RedisAdapter,
   type RedisAdapterOptions,
+  UpstashAdapter,
+  type UpstashAdapterOptions,
   CloudAdapter,
   type CloudAdapterOptions,
 } from './adapters/index.js';

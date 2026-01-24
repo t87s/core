@@ -1,6 +1,6 @@
 # t87s Benchmarks
 
-Compares t87s CloudAdapter against raw Upstash Redis operations.
+Apples-to-apples comparison: same t87s code, same tags, same queries - only the adapter differs.
 
 ## Setup
 
@@ -25,32 +25,31 @@ pnpm bench
 
 ## What's Being Compared
 
-| Scenario | Raw Upstash | t87s CloudAdapter |
-|----------|-------------|-------------------|
-| Cache Hit | Single GET | GET + tag validation |
-| Cache Miss | Single SET | GET (miss) + fn() + SET with tags |
+Same t87s query with two different adapters:
+- **UpstashAdapter** - Direct to Upstash Redis REST API
+- **CloudAdapter** - Through t87s Cloud (Cloudflare Workers + KV)
+
+Both do the same work: tag validation, cache storage, prefix-matching invalidation.
 
 ## Results (January 2026)
 
 ```
-Cache Hit (value already in remote cache)
-  Raw Upstash GET      107.26 ms  (9.31 ops/sec)
-  t87s CloudAdapter     31.07 ms  (32.19 ops/sec) ← 3.4x faster
+Cache Hit (same t87s query, different adapter)
+  t87s + UpstashAdapter  1,652ms  (0.6 ops/sec)
+  t87s + CloudAdapter      407ms  (2.5 ops/sec) ← 4x faster
 
-Cache Miss (fetch + store in remote)
-  Raw Upstash SET       88.47 ms  (11.30 ops/sec) ← faster
-  t87s CloudAdapter    360.81 ms  (2.77 ops/sec)
+Cache Miss (same t87s query, different adapter)
+  t87s + UpstashAdapter    639ms  (1.6 ops/sec)
+  t87s + CloudAdapter      479ms  (2.1 ops/sec) ← 1.3x faster
 ```
 
-## Why These Results?
+## Why CloudAdapter Wins
 
-**Cache Hit faster**: t87s Cloud runs on Cloudflare's edge (Workers + KV), which has lower read latency than Upstash's REST API.
+CloudAdapter uses Cloudflare's edge infrastructure:
+- **Workers** run at 300+ edge locations globally
+- **KV** is replicated across the edge with low-latency reads
+- Requests hit the nearest edge, not a central region
 
-**Cache Miss slower**: t87s does more work on a miss:
-1. Check cache (miss)
-2. Check tag invalidation times
-3. Call `fn()` to fetch the value
-4. Store value with metadata (TTL, tags, timestamps)
-5. Update tag index entries
+UpstashAdapter makes direct REST API calls to Upstash's infrastructure, which may have higher latency depending on your location.
 
-This overhead is the cost of hierarchical tag invalidation - when you invalidate `user:123`, all `user:123:*` entries are also invalidated automatically.
+Both adapters do the same t87s work (tag validation, prefix matching, etc.) - the difference is purely infrastructure.
