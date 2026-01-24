@@ -233,6 +233,19 @@ pre code {
 
 .hero .tagline {
   color: var(--term-text) !important;
+  white-space: nowrap;
+}
+
+/* Hero action buttons - fix padding */
+.hero .sl-flex.actions {
+  gap: 1rem;
+}
+
+.hero .sl-flex.actions a {
+  padding: 0.75rem 1.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
 }
 
 /* Action buttons (CTA) */
