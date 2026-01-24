@@ -121,13 +121,29 @@ nav a:hover {
   border-left: 2px solid var(--term-accent) !important;
 }
 
-/* Group labels in sidebar */
-.sidebar-content summary,
-.sidebar-content .group-label {
+/* Group labels in sidebar - force amber on all sidebar text */
+.sidebar-content,
+.sidebar-content *,
+nav[aria-label="Main"] *,
+.sl-sidebar *,
+starlight-menu-button ~ nav * {
+  color: var(--term-text) !important;
+}
+
+/* Dim the group headers (Concepts, Guides) */
+summary,
+details > summary,
+summary span,
+details > summary span,
+.large,
+[class*="large"] {
   color: var(--term-text-dim) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.75rem;
+}
+
+/* Keep active item bright */
+a[aria-current="page"],
+a[aria-current="page"] * {
+  color: var(--term-text-bright) !important;
 }
 
 /* Main content */
@@ -401,6 +417,39 @@ body::before {
   --ec-frm-tooltipBg: var(--term-bg-elevated) !important;
   --ec-brdCol: var(--term-border) !important;
   --ec-brdRad: 0 !important;
+
+  /* Fix syntax colors - ensure nothing is invisible */
+  --ec-codeFg: var(--term-text) !important;
+  --ec-codeSelectionBg: rgba(255, 193, 7, 0.2) !important;
+}
+
+/* Fix invisible syntax tokens in code blocks */
+.expressive-code code,
+.expressive-code pre,
+.expressive-code .ec-line {
+  color: var(--term-text) !important;
+}
+
+/* Ensure property access (.users, .findById) is visible */
+.expressive-code .pl-c1,
+.expressive-code .pl-en,
+.expressive-code .pl-smi,
+.expressive-code .token.property,
+.expressive-code .token.function,
+.expressive-code [style*="color:#"],
+.expressive-code span {
+  color: inherit;
+}
+
+/* Force Expressive Code to use dark theme colors (--0) not light (--1) */
+.expressive-code span[style] {
+  color: var(--0) !important;
+}
+
+/* Override any #111111 (near-black) colors that would be invisible */
+.expressive-code span[style*="--1:#111111"],
+.expressive-code span[style*="--1:#1"] {
+  color: var(--term-text) !important;
 }
 
 /* Note/warning/tip callouts */
