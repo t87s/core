@@ -6,6 +6,7 @@ export default defineConfig({
     starlight({
       title: 't87s',
       description: 'Declarative cache invalidation',
+      customCss: ['./src/styles/terminal.css'],
       social: {
         github: 'https://github.com/t87s/core',
       },
