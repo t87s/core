@@ -27,3 +27,10 @@ pnpm-debug.log*
 # Misc
 .cache/
 *.tsbuildinfo
+
+# Benchmarks
+benchmarks/results/
+
+# Docs build
+docs/.astro/
+docs/src/env.d.ts
