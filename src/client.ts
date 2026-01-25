@@ -25,6 +25,7 @@ export class T87s {
   private prefix: string;
   private defaultTtl: number;
   private defaultGrace: number | false;
+  private verifyPercent: number;
   private queryCounter = 0;
   private inFlight = new Map<string, Promise<unknown>>();
 
@@ -35,6 +36,10 @@ export class T87s {
     this.defaultGrace = options.defaultGrace === undefined || options.defaultGrace === false
       ? false
       : parseDuration(options.defaultGrace);
+    this.verifyPercent = options.verifyPercent ?? 0;
+    if (this.verifyPercent < 0 || this.verifyPercent > 1) {
+      throw new Error('verifyPercent must be between 0 and 1');
+    }
   }
 
   query<TArgs extends unknown[], TResult>(
@@ -110,6 +115,31 @@ export class T87s {
     return false;
   }
 
+  private shouldVerify(): boolean {
+    // Only verify if adapter supports reporting (CloudAdapter)
+    if (!this.adapter.reportVerification) return false;
+    if (this.verifyPercent <= 0) return false;
+    if (this.verifyPercent >= 1) return true;
+    return Math.random() < this.verifyPercent;
+  }
+
+  private async runVerification<TResult>(
+    cacheKey: string,
+    config: QueryConfig<TResult>,
+    cachedValue: TResult
+  ): Promise<void> {
+    try {
+      const freshValue = await config.fn();
+      const cachedHash = simpleHash(JSON.stringify(cachedValue));
+      const freshHash = simpleHash(JSON.stringify(freshValue));
+      const isStale = cachedHash !== freshHash;
+
+      await this.adapter.reportVerification!(cacheKey, isStale, cachedHash, freshHash);
+    } catch {
+      // Silently ignore verification errors
+    }
+  }
+
   private async getOrFetch<TResult>(
     cacheKey: string,
     config: QueryConfig<TResult>
@@ -122,7 +152,10 @@ export class T87s {
       const isStale = await this.isEntryStale(cached);
 
       if (!isStale && cached.expiresAt > now) {
-        // Fresh hit
+        // Fresh hit - potentially verify in background
+        if (this.shouldVerify()) {
+          this.runVerification(cacheKey, config, cached.value).catch(() => {});
+        }
         return cached.value;
       }
 

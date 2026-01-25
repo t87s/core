@@ -35,6 +35,8 @@ export interface T87sOptions {
   prefix?: string;
   defaultTtl?: Duration;
   defaultGrace?: Duration | false;
+  /** Sampling rate for staleness verification (0.0-1.0). Default 0 (disabled). Only used with CloudAdapter. */
+  verifyPercent?: number;
 }
 
 /**

@@ -14,7 +14,7 @@ export class CloudAdapter implements StorageAdapter {
 
   constructor(options: CloudAdapterOptions) {
     this.apiKey = options.apiKey;
-    this.baseUrl = options.baseUrl ?? 'https://t87s-cloud.mike-solomon.workers.dev';
+    this.baseUrl = options.baseUrl ?? 'https://api.t87s.dev';
   }
 
   private async request<T>(endpoint: string, body: unknown): Promise<T> {
