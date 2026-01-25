@@ -6,6 +6,7 @@ export default defineConfig({
     starlight({
       title: 't87s',
       description: 'Declarative cache invalidation',
+      favicon: '/favicon.svg',
       customCss: ['./src/styles/terminal.css'],
       tableOfContents: false,
       social: [
