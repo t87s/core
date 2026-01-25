@@ -3,7 +3,7 @@ title: Grace Periods
 description: Stale-while-revalidate for resilience
 ---
 
-Grace periods let you serve stale data when the underlying source fails.
+Grace periods let you serve stale data when the underlying source fails. Not unlike my middle-school lunch when New Jersey ran out of whatever crap they put between two pieces of "bread".
 
 ## The Problem
 
@@ -15,7 +15,7 @@ const getUser = t87s.query((id) => ({
 }));
 ```
 
-Without grace: if TTL expires and DB is down, users get an error.
+Without grace: if TTL expires and DB is down, users get an error, then a refund, then a lawsuit.
 
 ## The Solution
 
@@ -28,20 +28,4 @@ const getUser = t87s.query((id) => ({
 }));
 ```
 
-With grace:
-1. TTL expires
-2. t87s calls `fn()` to refresh
-3. If `fn()` fails and we have stale data within grace period → serve stale
-4. Background retry continues
-
-## When to Use
-
-- **High availability requirements** - Better stale than error
-- **External APIs** - Third-party services go down
-- **Read-heavy endpoints** - Users won't notice slightly stale data
-
-## When NOT to Use
-
-- **Financial data** - Stale prices are dangerous
-- **Security-sensitive** - Stale permissions are a risk
-- **Write-after-read** - User expects to see their own changes
+With grace: when TTL expires, t87s tries to refresh. If that fails and we have stale data within the grace period, we hold our nose and serve the stale data while retrying in the background.

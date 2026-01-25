@@ -345,16 +345,32 @@ starlight-theme-select {
   display: none !important;
 }
 
-/* Pagination */
+/* Pagination - minimal terminal style */
+.pagination-links {
+  border-top: 1px solid var(--term-border) !important;
+  padding-top: 1.5rem !important;
+  margin-top: 3rem !important;
+}
+
 .pagination-links a {
-  background: var(--term-bg-elevated) !important;
-  border: 1px solid var(--term-border) !important;
-  border-radius: 0 !important;
-  color: var(--term-text) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: var(--term-text-dim) !important;
+  font-size: 0.875rem !important;
 }
 
 .pagination-links a:hover {
-  border-color: var(--term-accent) !important;
+  color: var(--term-text-bright) !important;
+  background: transparent !important;
+}
+
+/* Hide the "Previous" / "Next" labels, just show page titles */
+.pagination-links .link-title {
+  color: var(--term-text) !important;
+}
+
+.pagination-links a:hover .link-title {
   color: var(--term-text-bright) !important;
 }
 

@@ -3,7 +3,9 @@ title: Prefix Matching
 description: Hierarchical cache invalidation with prefix matching
 ---
 
-Prefix matching is t87s's killer feature. When you invalidate a tag, all "child" tags are also invalidated.
+In many great literary works (the House of Atreus, One Hundred Years of Solitude, the Old Testament), a curse is placed not only on the protagonist, but also on their progeny. That's friggin' awesome.
+
+Tags work the same way. When you invalidate a tag, all "child" tags are also invalidated.
 
 ## How It Works
 
@@ -20,26 +22,6 @@ const tags = defineTags({
 // - ['user', '123', 'settings'] ← prefix match
 ```
 
-## The Problem It Solves
-
-Without prefix matching, you'd need to remember every related cache key:
-
-```typescript
-// Manual approach (error-prone)
-cache.delete('user:123');
-cache.delete('user:123:posts');
-cache.delete('user:123:settings');
-// Did you forget user:123:notifications? Stale data.
-```
-
-With t87s:
-
-```typescript
-// Declarative approach (complete)
-return { invalidates: [tags.user(id)] };
-// All children automatically invalidated
-```
-
 ## Exact Mode
 
 If you only want to invalidate the exact tag:
@@ -50,5 +32,3 @@ return {
   exact: true, // Only invalidates ['user', '123'], not children
 };
 ```
-
-Use sparingly—prefix matching is usually what you want.

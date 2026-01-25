@@ -1,0 +1,37 @@
+---
+title: TTL
+description: How long your cache stays fresh
+---
+
+TTL stands for "Time To Live", which sounds like a medical prognosis but is actually just how long your cached data stays fresh before it expires.
+
+```typescript
+const getUser = t87s.query((id: string) => ({
+  tags: [tags.user(id)],
+  ttl: '10m', // Cache this for 10 minutes
+  fn: () => db.users.findById(id),
+}));
+```
+
+## Human-friendly durations
+
+Nobody wants to do math. We support strings like:
+
+- `'30s'` - 30 seconds
+- `'5m'` - 5 minutes
+- `'2h'` - 2 hours
+- `'1d'` - 1 day
+
+Or if you like mashing the 0 key, milliseconds work too: `ttl: 600000`.
+
+## Choosing a TTL
+
+There's no magic number. Short TTLs work well for real-time dashboards or user sessions, whereas longer ones make sense for static content or configuration data that rarely changes.
+
+Tuning your TTL is more of an art than a science. And, like all great art, it is a completely mercantile and transactional endeavor. Not unlike our SaaS offering, which auto-tunes your TTL (amongst other things) so that your cache purrs like a Formula 1 engine.
+
+## TTL vs Invalidation
+
+In a perfect world, you'd invalidate exactly when data changes and never need TTL at all. But we don't live in a perfect world. Well, actually, I do, but you don't. You or someone on your team will invariably forget to invalidate the cache.
+
+TTL is your safety net. Even if everything else goes belly up, your cache won't serve stale data forever.

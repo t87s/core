@@ -3,7 +3,7 @@ title: Adapters
 description: Choosing the right storage adapter
 ---
 
-t87s supports three adapters for different environments.
+t87s supports four adapters for different environments.
 
 ## MemoryAdapter
 
@@ -16,8 +16,6 @@ const t87s = new T87s({
   adapter: new MemoryAdapter(),
 });
 ```
-
-**Use when:** Local development, testing, single-process apps.
 
 ## RedisAdapter
 
@@ -37,11 +35,24 @@ const t87s = new T87s({
 });
 ```
 
-**Use when:** Multi-process, self-hosted, need persistence.
+## UpstashAdapter
+
+If you're using Upstash, this adapter gives you a smoother DX than the Redis Adapter.
+
+```typescript
+import { UpstashAdapter } from '@t87s/core';
+
+const t87s = new T87s({
+  adapter: new UpstashAdapter({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  }),
+});
+```
 
 ## CloudAdapter
 
-For managed production. Uses t87s Cloud.
+Turnkey caching solution with a generous free tier. Fast, offers unmatched concurrency, provides real-time cache optimization via MCP.
 
 ```typescript
 import { CloudAdapter } from '@t87s/core';
@@ -54,14 +65,3 @@ const t87s = new T87s({
   }),
 });
 ```
-
-**Use when:** Want managed service, staleness detection, multi-region.
-
-## Comparison
-
-| Feature | Memory | Redis | Cloud |
-|---------|--------|-------|-------|
-| Setup | None | Redis server | API key |
-| Multi-process | ❌ | ✅ | ✅ |
-| Persistence | ❌ | ✅ | ✅ |
-| Staleness detection | ❌ | ❌ | ✅ |

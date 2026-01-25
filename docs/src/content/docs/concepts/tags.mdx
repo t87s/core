@@ -1,39 +1,39 @@
 ---
-title: Tags
-description: Understanding cache tags in t87s
+title: Tags, Queries, Invalidations
+description: The three pillars of caching in t87s
 ---
 
-Tags are typed identifiers that link cache entries to the data they depend on.
+Tags are the first step in caching. They're a way for you to give logical names to your database and API operations.
 
-## Defining Tags
+For example, if you have a user with ID `123`, you might tag it as `['user', '123']`. If that user has posts, you might tag those as `['user', '123', 'posts']`.
 
-Use `defineTags()` to create a typed tag factory:
+tl;dr - tags are simple names for the things you care about.
 
 ```typescript
 const tags = defineTags({
   user: (id: string) => ['user', id],
   userPosts: (id: string) => ['user', id, 'posts'],
-  userSettings: (id: string) => ['user', id, 'settings'],
-  team: (id: string) => ['team', id],
 });
 ```
 
-Each function returns a tag array. The return type is opaque—you can only create valid tags through `defineTags()`.
+## Queries
 
-## Using Tags
-
-Attach tags to queries:
+Queries are read-only interactions with a database, API, blockchain, file system, or any otherwise persnickety entity. We attach tags to queries to say "instead of doing that expensive operation every time, when we see this tag again, use the cached result."
 
 ```typescript
+// "get user 123, and remember it by this tag"
 const getUser = t87s.query((id: string) => ({
   tags: [tags.user(id)],
   fn: () => db.users.findById(id),
 }));
 ```
 
-Return tags from mutations:
+## Invalidations
+
+Nothing in this world is permanent (except impermanence itself), and that's why you need invalidations. They tell the caching engine that data is stale and needs to be refetched.
 
 ```typescript
+// "user 123 changed, forget what you knew"
 const updateUser = t87s.mutation(async (id, data) => {
   const user = await db.users.update(id, data);
   return {
@@ -43,8 +43,32 @@ const updateUser = t87s.mutation(async (id, data) => {
 });
 ```
 
-## Why Arrays?
+## The caching trifecta
 
-Tags are arrays to support hierarchical prefix matching. `['user', '123', 'posts']` is a child of `['user', '123']`.
+So there you have it:
 
-See [Prefix Matching](/concepts/prefix-matching/) for details.
+1. **Tags** give operations names
+2. **Queries** use tags to know when we can hit the speedy cache instead of the slow operation
+3. **Invalidations** tell the cache that data is stale and needs to be refreshed
+
+Here's how they work together:
+
+```typescript
+// First call: cache miss, fetches from DB
+const user = await getUser('123');
+
+// Second call: cache hit, instant
+const userAgain = await getUser('123');
+
+// Update triggers invalidation
+await updateUser('123', { name: 'New Name' });
+
+// Next call: cache miss (was invalidated), fetches fresh data
+const freshUser = await getUser('123');
+```
+
+## Why arrays?
+
+You might have noticed tags are arrays like `['user', '123']` instead of strings like `'user:123'`. This enables something we call "hierarchical invalidation", which sounds as pretentious as it is. When you invalidate `['user', '123']`, it also invalidates `['user', '123', 'posts']` and `['user', '123', 'settings']`.
+
+See [Prefix Matching](/concepts/prefix-matching/) for the details.

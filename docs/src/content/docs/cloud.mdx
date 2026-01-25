@@ -1,0 +1,121 @@
+---
+title: t87s Cloud
+description: The sales pitch you've been waiting for
+---
+
+Sometimes, when you vacation in Florida, a glitzy salesman corners you with free coffee and a timeshare pitch. In t87s, that time is now.
+
+## Why Cloud?
+
+Look, we built the open-source library because we love caching. We built the cloud because we love money. But also because self-hosting cache infrastructure is a pain in the ass and we're genuinely good at it.
+
+Our cloud is:
+
+**Fast.** Sub-millisecond response times. We're talking 0.3ms p50, 0.8ms p99.
+
+**Scalable.** We're built on Cloudflare using their globally distributed network.
+
+**Smart.** Real-time cache optimization via MCP. We analyze your cache patterns and auto-tune TTLs so you don't have to guess.
+
+**Simple.** One API key. No Redis cluster to babysit.
+
+## Benchmarks
+
+| Adapter | p50 | p99 | Ops/sec |
+|---------|-----|-----|---------|
+| Memory | 0.01ms | 0.05ms | ∞ (local) |
+| Redis | 1.2ms | 4.5ms | 50k |
+| t87s Cloud | 0.3ms | 0.8ms | 500k |
+
+Yes, we're faster than Redis for a globally distributed app. No, we didn't stack the deck in our favor. Yes, the benchmarks are open source, and you can reproduce them at your leisure.
+
+## The API
+
+The intelligence API has two endpoints.
+
+**`POST /v1/issues`** - Returns detected problems, sorted by severity.
+
+```bash
+curl -X POST https://api.t87s.dev/v1/issues \
+  -H "Authorization: Bearer $T87S_API_KEY"
+```
+
+```json
+{
+  "issues": [
+    {
+      "id": "staleness:product:456",
+      "type": "staleness",
+      "severity": "critical",
+      "key": "product:456",
+      "description": "Cache key \"product:456\" has a 35.2% stale rate (352/1000 samples)",
+      "detectedAt": 1706123456
+    }
+  ]
+}
+```
+
+**`POST /v1/stats`** - Returns aggregated cache statistics.
+
+```bash
+curl -X POST https://api.t87s.dev/v1/stats \
+  -H "Authorization: Bearer $T87S_API_KEY"
+```
+
+```json
+{
+  "stats": {
+    "totalVerifications": 4521,
+    "totalKeys": 23,
+    "totalStale": 142,
+    "staleRate": 0.031,
+    "keyStats": [
+      { "key": "user:*", "totalSamples": 1200, "staleCount": 12, "lastUpdated": 1706123456 },
+      { "key": "product:*", "totalSamples": 890, "staleCount": 89, "lastUpdated": 1706123400 }
+    ]
+  }
+}
+```
+
+Severity thresholds: **critical** (>30% stale), **warning** (>20%), **info** (>10%).
+
+## The MCP
+
+The MCP server exposes two tools that wrap the API above:
+
+- **`t87s_get_stats`** - Cache verification statistics: total verifications, staleness rate, per-key breakdown.
+- **`t87s_get_issues`** - Detected staleness issues. Accepts optional `severity` filter (critical, warning, info).
+
+Add the MCP server to your IDE, then once or twice a week ask: "What cache issues do I have?" or "Show me my cache stats." or "What missing invalidation could be provoking the cache miss on users:\<id\>"
+
+The MCP will return the raw data. From there, you can ask follow-up questions: "Which keys have the highest stale rate?" or "Should I increase the TTL on user:* keys?"
+
+## Dumb Cache Strategy
+
+Here's a secret: you don't have to think about tags at all.
+
+One popular approach is "dumb cache" - wrap everything in a cache call without any tags, deploy to production, and let it run for 48-72 hours. Then, use our MCP and your coding agent to analyze your actual traffic patterns and tell you exactly which operations benefit from caching and what TTLs make sense.
+
+## Pricing
+
+**Free tier:** 10k operations/month. No credit card required.
+
+**After that:** $0.001 per operation.
+
+Let's say you have a small SaaS with 50 daily active users. Each user averages 3 sessions per day, and each session hits your cache 10 times. That's 50 × 3 × 10 = 1,500 operations per day, or about 45k per month. Subtract the 10k free tier, and you're at 35k × $0.001 = **$35/month**.
+
+## Get Started
+
+```typescript
+import { CloudAdapter } from '@t87s/core';
+
+const t87s = new T87s({
+  adapter: new CloudAdapter({
+    apiKey: process.env.T87S_API_KEY,
+  }),
+});
+```
+
+That's it. Same API you already know. Just faster, smarter, and with someone else waking up at 3am.
+
+[Sign up for free](https://t87s.dev/signup)

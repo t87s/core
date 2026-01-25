@@ -7,9 +7,10 @@ export default defineConfig({
       title: 't87s',
       description: 'Declarative cache invalidation',
       customCss: ['./src/styles/terminal.css'],
-      social: {
-        github: 'https://github.com/t87s/core',
-      },
+      tableOfContents: false,
+      social: [
+        { icon: 'github', label: 'GitHub', href: 'https://github.com/t87s/core' },
+      ],
       sidebar: [
         { label: 'Getting Started', slug: 'getting-started' },
         {
@@ -17,6 +18,7 @@ export default defineConfig({
           items: [
             { label: 'Tags', slug: 'concepts/tags' },
             { label: 'Prefix Matching', slug: 'concepts/prefix-matching' },
+            { label: 'TTL', slug: 'concepts/ttl' },
             { label: 'Grace Periods', slug: 'concepts/grace-periods' },
           ],
         },
@@ -28,7 +30,7 @@ export default defineConfig({
           ],
         },
         { label: 'API Reference', slug: 'api/reference' },
-        { label: 'Comparison', slug: 'comparison' },
+        { label: 't87s Cloud', slug: 'cloud' },
       ],
     }),
   ],

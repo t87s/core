@@ -3,11 +3,46 @@ title: Getting Started
 description: Install t87s and create your first cached query
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 ## Installation
 
-```bash
-npm install @t87s/core
-```
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @t87s/core
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @t87s/core
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @t87s/core
+    ```
+  </TabItem>
+  <TabItem label="deno">
+    ```typescript
+    import { T87s } from "npm:@t87s/core";
+    ```
+  </TabItem>
+  <TabItem label="snail">
+    ```text
+    To whom it may concern,
+
+    I am writing to request a copy of t87s core.
+    Please find enclosed a self-addressed stamped envelope.
+
+    When transcribing the library, kindly use small
+    handwriting, as the postage covers only 100 grams.
+
+    Sincerely,
+    A Patient Developer
+    ```
+  </TabItem>
+</Tabs>
 
 ## Basic Setup
 
@@ -15,6 +50,7 @@ npm install @t87s/core
 import { T87s, MemoryAdapter, defineTags } from '@t87s/core';
 
 // 1. Define your tag patterns
+//    (Tags can be tricky. We got your back at /concepts/tags/)
 const tags = defineTags({
   user: (id: string) => ['user', id],
   userPosts: (id: string) => ['user', id, 'posts'],
@@ -32,7 +68,7 @@ const getUser = t87s.query((id: string) => ({
   fn: () => db.users.findById(id),
 }));
 
-// 4. Create mutations that invalidate
+// 4. Create mutations that invalidate the cache
 const updateUser = t87s.mutation(async (id: string, data: UserUpdate) => {
   const user = await db.users.update(id, data);
   return {
