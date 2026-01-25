@@ -5,7 +5,7 @@ import { defineTags } from './tags.js';
 
 // Skip if no API key provided
 const API_KEY = process.env['T87S_API_KEY'] ?? 't87s_dev_test_key_12345';
-const BASE_URL = process.env['T87S_BASE_URL'] ?? 'https://t87s-cloud.mike-solomon.workers.dev';
+const BASE_URL = process.env['T87S_BASE_URL'] ?? 'https://api.t87s.dev';
 
 describe('T87s with CloudAdapter (E2E)', () => {
   let t87s: T87s;

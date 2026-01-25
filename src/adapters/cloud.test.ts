@@ -37,7 +37,7 @@ describe('CloudAdapter', () => {
 
       expect(result).toBeNull();
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://t87s-cloud.mike-solomon.workers.dev/v1/cache/get',
+        'https://api.t87s.dev/v1/cache/get',
         {
           method: 'POST',
           headers: {
@@ -98,7 +98,7 @@ describe('CloudAdapter', () => {
       await adapter.set('key1', entry);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://t87s-cloud.mike-solomon.workers.dev/v1/cache/set',
+        'https://api.t87s.dev/v1/cache/set',
         {
           method: 'POST',
           headers: {
@@ -122,7 +122,7 @@ describe('CloudAdapter', () => {
       await adapter.delete('key1');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://t87s-cloud.mike-solomon.workers.dev/v1/cache/delete',
+        'https://api.t87s.dev/v1/cache/delete',
         {
           method: 'POST',
           headers: {
@@ -156,7 +156,7 @@ describe('CloudAdapter', () => {
       await adapter.setTagInvalidationTime(['user', '1'], 1000);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://t87s-cloud.mike-solomon.workers.dev/v1/invalidate',
+        'https://api.t87s.dev/v1/invalidate',
         {
           method: 'POST',
           headers: {
@@ -180,7 +180,7 @@ describe('CloudAdapter', () => {
       await adapter.clear();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://t87s-cloud.mike-solomon.workers.dev/v1/clear',
+        'https://api.t87s.dev/v1/clear',
         {
           method: 'POST',
           headers: {
@@ -235,7 +235,7 @@ describe('CloudAdapter', () => {
       await adapter.reportVerification('my-key', true, 'hash1', 'hash2');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://t87s-cloud.mike-solomon.workers.dev/v1/verify',
+        'https://api.t87s.dev/v1/verify',
         {
           method: 'POST',
           headers: {
