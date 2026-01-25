@@ -3,15 +3,32 @@ title: TTL
 description: How long your cache stays fresh
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 TTL stands for "Time To Live", which sounds like a medical prognosis but is actually just how long your cached data stays fresh before it expires.
 
-```typescript
-const getUser = t87s.query((id: string) => ({
-  tags: [tags.user(id)],
-  ttl: '10m', // Cache this for 10 minutes
-  fn: () => db.users.findById(id),
-}));
-```
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    const getUser = t87s.query((id: string) => ({
+      tags: [tags.user(id)],
+      ttl: '10m', // Cache this for 10 minutes
+      fn: () => db.users.findById(id),
+    }));
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    @t87s.query
+    def get_user(id: str) -> QueryConfig[User]:
+        return QueryConfig(
+            tags=[tags["user"](id)],
+            ttl="10m",  # Cache this for 10 minutes
+            fn=lambda: db.users.find_by_id(id),
+        )
+    ```
+  </TabItem>
+</Tabs>
 
 ## Human-friendly durations
 

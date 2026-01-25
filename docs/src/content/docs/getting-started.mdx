@@ -23,6 +23,16 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     pnpm add @t87s/core
     ```
   </TabItem>
+  <TabItem label="pip">
+    ```bash
+    pip install t87s
+    ```
+  </TabItem>
+  <TabItem label="uv">
+    ```bash
+    uv add t87s
+    ```
+  </TabItem>
   <TabItem label="deno">
     ```typescript
     import { T87s } from "npm:@t87s/core";
@@ -46,53 +56,109 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## Basic Setup
 
-```typescript
-import { T87s, MemoryAdapter, defineTags } from '@t87s/core';
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { T87s, MemoryAdapter, defineTags } from '@t87s/core';
 
-// 1. Define your tag patterns
-//    (Tags can be tricky. We got your back at /concepts/tags/)
-const tags = defineTags({
-  user: (id: string) => ['user', id],
-  userPosts: (id: string) => ['user', id, 'posts'],
-});
+    // 1. Define your tag patterns
+    //    (Tags can be tricky. We got your back at /concepts/tags/)
+    const tags = defineTags({
+      user: (id: string) => ['user', id],
+      userPosts: (id: string) => ['user', id, 'posts'],
+    });
 
-// 2. Initialize t87s
-const t87s = new T87s({
-  adapter: new MemoryAdapter(),
-});
+    // 2. Initialize t87s
+    const t87s = new T87s({
+      adapter: new MemoryAdapter(),
+    });
 
-// 3. Create cached queries
-const getUser = t87s.query((id: string) => ({
-  tags: [tags.user(id)],
-  ttl: '10m',
-  fn: () => db.users.findById(id),
-}));
+    // 3. Create cached queries
+    const getUser = t87s.query((id: string) => ({
+      tags: [tags.user(id)],
+      ttl: '10m',
+      fn: () => db.users.findById(id),
+    }));
 
-// 4. Create mutations that invalidate the cache
-const updateUser = t87s.mutation(async (id: string, data: UserUpdate) => {
-  const user = await db.users.update(id, data);
-  return {
-    result: user,
-    invalidates: [tags.user(id)], // Also invalidates userPosts via prefix!
-  };
-});
-```
+    // 4. Create mutations that invalidate the cache
+    const updateUser = t87s.mutation(async (id: string, data: UserUpdate) => {
+      const user = await db.users.update(id, data);
+      return {
+        result: user,
+        invalidates: [tags.user(id)], // Also invalidates userPosts via prefix!
+      };
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from t87s import T87s, MemoryAdapter, define_tags, QueryConfig, MutationResult
+
+    # 1. Define your tag patterns
+    #    (Tags can be tricky. We got your back at /concepts/tags/)
+    tags = define_tags({
+        "user": lambda id: ("user", id),
+        "user_posts": lambda id: ("user", id, "posts"),
+    })
+
+    # 2. Initialize t87s
+    t87s = T87s(adapter=MemoryAdapter())
+
+    # 3. Create cached queries
+    @t87s.query
+    def get_user(id: str) -> QueryConfig[User]:
+        return QueryConfig(
+            tags=[tags["user"](id)],
+            ttl="10m",
+            fn=lambda: db.users.find_by_id(id),
+        )
+
+    # 4. Create mutations that invalidate the cache
+    @t87s.mutation
+    def update_user(id: str, data: UserUpdate) -> MutationResult[User]:
+        user = db.users.update(id, data)
+        return MutationResult(
+            result=user,
+            invalidates=[tags["user"](id)],  # Also invalidates user_posts via prefix!
+        )
+    ```
+  </TabItem>
+</Tabs>
 
 ## Usage
 
-```typescript
-// First call: cache miss, fetches from DB
-const user = await getUser('123');
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    // First call: cache miss, fetches from DB
+    const user = await getUser('123');
 
-// Second call: cache hit
-const userAgain = await getUser('123');
+    // Second call: cache hit
+    const userAgain = await getUser('123');
 
-// Update: invalidates user:123 AND user:123:posts
-await updateUser('123', { name: 'New Name' });
+    // Update: invalidates user:123 AND user:123:posts
+    await updateUser('123', { name: 'New Name' });
 
-// Next call: cache miss (was invalidated)
-const freshUser = await getUser('123');
-```
+    // Next call: cache miss (was invalidated)
+    const freshUser = await getUser('123');
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    # First call: cache miss, fetches from DB
+    user = get_user("123")
+
+    # Second call: cache hit
+    user_again = get_user("123")
+
+    # Update: invalidates user:123 AND user:123:posts
+    update_user("123", {"name": "New Name"})
+
+    # Next call: cache miss (was invalidated)
+    fresh_user = get_user("123")
+    ```
+  </TabItem>
+</Tabs>
 
 ## Next Steps
 
