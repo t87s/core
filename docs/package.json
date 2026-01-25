@@ -6,11 +6,15 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "deploy": "pnpm build && wrangler pages deploy dist --project-name=t87s-docs --commit-dirty=true"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.37.4",
     "astro": "^5.16.15",
     "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }
