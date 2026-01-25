@@ -60,8 +60,6 @@ import { CloudAdapter } from '@t87s/core';
 const t87s = new T87s({
   adapter: new CloudAdapter({
     apiKey: process.env.T87S_API_KEY,
-    verify: async (key, cached) => fetchFresh(key), // For staleness detection
-    verifyPercent: 0.05,
   }),
 });
 ```

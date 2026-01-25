@@ -25,7 +25,6 @@ export type {
   QueryConfig,
   MutationResult,
   StorageAdapter,
-  VerifyCallback,
 } from './types.js';
 
 // Utilities

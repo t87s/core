@@ -56,12 +56,6 @@ export interface MutationResult<T> {
   exact?: boolean;
 }
 
-/**
- * Callback to fetch fresh data for cache verification.
- * Called with the cache key and the cached value, should return fresh data.
- */
-export type VerifyCallback<T = unknown> = (key: string, cachedValue: T) => Promise<T>;
-
 // Re-export for convenience
 export type { Tag } from './tags.js';
 export type { Duration } from './duration.js';
