@@ -1,7 +1,40 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { T87s } from './client.js';
 import { MemoryAdapter } from './adapters/memory.js';
 import { defineTags } from './tags.js';
+import type { StorageAdapter } from './types.js';
+
+function createMockAdapterWithVerification() {
+  const store = new Map<string, unknown>();
+  const tagTimes = new Map<string, number>();
+  const reportVerification = vi.fn();
+
+  const adapter: StorageAdapter = {
+    async get<T>(key: string) {
+      return (store.get(key) as T) ?? null;
+    },
+    async set<T>(key: string, entry: T) {
+      store.set(key, entry);
+    },
+    async delete(key: string) {
+      store.delete(key);
+    },
+    async getTagInvalidationTime(tag: string[]) {
+      return tagTimes.get(tag.join(':')) ?? null;
+    },
+    async setTagInvalidationTime(tag: string[], time: number) {
+      tagTimes.set(tag.join(':'), time);
+    },
+    async clear() {
+      store.clear();
+      tagTimes.clear();
+    },
+    async disconnect() {},
+    reportVerification,
+  };
+
+  return { adapter, reportVerification, store };
+}
 
 describe('T87s', () => {
   let t87s: T87s;
@@ -297,6 +330,154 @@ describe('T87s', () => {
       // Next call should get fresh value
       const result2 = await getUser('123');
       expect(result2.name).toBe('User 2');
+    });
+  });
+
+  describe('verification', () => {
+    it('should call reportVerification on sampled cache hits', async () => {
+      const { adapter, reportVerification } = createMockAdapterWithVerification();
+      const t87s = new T87s({ adapter, verifyPercent: 1.0 });
+
+      let callCount = 0;
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          callCount++;
+          return { id, name: `User ${callCount}` };
+        },
+      }));
+
+      // First call - cache miss, no verification
+      await getUser('123');
+      expect(callCount).toBe(1);
+      expect(reportVerification).not.toHaveBeenCalled();
+
+      // Second call - cache hit, should verify
+      await getUser('123');
+
+      // Wait for async verification to complete
+      await vi.waitFor(() => {
+        expect(reportVerification).toHaveBeenCalledTimes(1);
+      });
+
+      expect(callCount).toBe(2); // fn called for verification
+      const call = reportVerification.mock.calls[0]!;
+      expect(call[0]).toContain('query_'); // Verify key is passed
+      expect(call[1]).toBe(true); // isStale (User 1 vs User 2)
+    });
+
+    it('should not verify when verifyPercent is 0', async () => {
+      const { adapter, reportVerification } = createMockAdapterWithVerification();
+      const t87s = new T87s({ adapter, verifyPercent: 0 });
+
+      let callCount = 0;
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          callCount++;
+          return { id, name: 'Alice' };
+        },
+      }));
+
+      await getUser('123');
+      await getUser('123');
+
+      await new Promise(r => setTimeout(r, 50));
+      expect(reportVerification).not.toHaveBeenCalled();
+      expect(callCount).toBe(1); // fn only called once (initial fetch)
+    });
+
+    it('should not verify when adapter lacks reportVerification', async () => {
+      // Use MemoryAdapter which has no reportVerification
+      const t87s = new T87s({ adapter: new MemoryAdapter(), verifyPercent: 1.0 });
+
+      let callCount = 0;
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => {
+          callCount++;
+          return { id, name: 'Alice' };
+        },
+      }));
+
+      await getUser('123');
+      await getUser('123');
+
+      await new Promise(r => setTimeout(r, 50));
+      expect(callCount).toBe(1); // fn only called once, no verification
+    });
+
+    it('should report isStale=false when values match', async () => {
+      const { adapter, reportVerification } = createMockAdapterWithVerification();
+      const t87s = new T87s({ adapter, verifyPercent: 1.0 });
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => ({ id, name: 'Alice' }), // Always same value
+      }));
+
+      await getUser('123');
+      await getUser('123');
+
+      await vi.waitFor(() => {
+        expect(reportVerification).toHaveBeenCalledTimes(1);
+      });
+
+      expect(reportVerification.mock.calls[0]![1]).toBe(false); // isStale = false
+    });
+
+    it('should silently ignore verification errors', async () => {
+      const { adapter, reportVerification } = createMockAdapterWithVerification();
+      reportVerification.mockRejectedValue(new Error('Network error'));
+
+      const t87s = new T87s({ adapter, verifyPercent: 1.0 });
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => ({ id, name: 'Alice' }), // Always succeeds
+      }));
+
+      await getUser('123');
+      // Should not throw even though reportVerification fails
+      const result = await getUser('123');
+      expect(result).toEqual({ id: '123', name: 'Alice' });
+
+      // Verify reportVerification was called (and failed silently)
+      await vi.waitFor(() => {
+        expect(reportVerification).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('should respect sampling rate', async () => {
+      const { adapter, reportVerification } = createMockAdapterWithVerification();
+      const t87s = new T87s({ adapter, verifyPercent: 0.5 });
+
+      const mathRandomSpy = vi.spyOn(Math, 'random');
+
+      const getUser = t87s.query((id: string) => ({
+        tags: [tags.user(id)],
+        fn: async () => ({ id, name: 'Alice' }),
+      }));
+
+      // First call - cache miss
+      await getUser('123');
+
+      // Second call - random < 0.5, should verify
+      mathRandomSpy.mockReturnValueOnce(0.3);
+      await getUser('123');
+
+      await vi.waitFor(() => {
+        expect(reportVerification).toHaveBeenCalledTimes(1);
+      });
+
+      // Third call - random >= 0.5, should NOT verify
+      mathRandomSpy.mockReturnValueOnce(0.7);
+      await getUser('123');
+
+      await new Promise(r => setTimeout(r, 50));
+      expect(reportVerification).toHaveBeenCalledTimes(1); // Still 1
+
+      mathRandomSpy.mockRestore();
     });
   });
 });
