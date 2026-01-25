@@ -3,32 +3,65 @@ title: Prefix Matching
 description: Hierarchical cache invalidation with prefix matching
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 In many great literary works (the House of Atreus, One Hundred Years of Solitude, the Old Testament), a curse is placed not only on the protagonist, but also on their progeny. That's friggin' awesome.
 
 Tags work the same way. When you invalidate a tag, all "child" tags are also invalidated.
 
 ## How It Works
 
-```typescript
-const tags = defineTags({
-  user: (id: string) => ['user', id],
-  userPosts: (id: string) => ['user', id, 'posts'],
-  userSettings: (id: string) => ['user', id, 'settings'],
-});
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    const tags = defineTags({
+      user: (id: string) => ['user', id],
+      userPosts: (id: string) => ['user', id, 'posts'],
+      userSettings: (id: string) => ['user', id, 'settings'],
+    });
 
-// Invalidating tags.user('123') also invalidates:
-// - ['user', '123']           ← exact match
-// - ['user', '123', 'posts']  ← prefix match
-// - ['user', '123', 'settings'] ← prefix match
-```
+    // Invalidating tags.user('123') also invalidates:
+    // - ['user', '123']           ← exact match
+    // - ['user', '123', 'posts']  ← prefix match
+    // - ['user', '123', 'settings'] ← prefix match
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    tags = define_tags({
+        "user": lambda id: ("user", id),
+        "user_posts": lambda id: ("user", id, "posts"),
+        "user_settings": lambda id: ("user", id, "settings"),
+    })
+
+    # Invalidating tags["user"]("123") also invalidates:
+    # - ("user", "123")             ← exact match
+    # - ("user", "123", "posts")    ← prefix match
+    # - ("user", "123", "settings") ← prefix match
+    ```
+  </TabItem>
+</Tabs>
 
 ## Exact Mode
 
 If you only want to invalidate the exact tag:
 
-```typescript
-return {
-  invalidates: [tags.user(id)],
-  exact: true, // Only invalidates ['user', '123'], not children
-};
-```
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    return {
+      invalidates: [tags.user(id)],
+      exact: true, // Only invalidates ['user', '123'], not children
+    };
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    return MutationResult(
+        result=user,
+        invalidates=[tags["user"](id)],
+        exact=True,  # Only invalidates ("user", "123"), not children
+    )
+    ```
+  </TabItem>
+</Tabs>

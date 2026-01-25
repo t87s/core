@@ -3,63 +3,125 @@ title: Adapters
 description: Choosing the right storage adapter
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 t87s supports four adapters for different environments.
 
 ## MemoryAdapter
 
 For local development. Single-process, no persistence.
 
-```typescript
-import { MemoryAdapter } from '@t87s/core';
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { MemoryAdapter } from '@t87s/core';
 
-const t87s = new T87s({
-  adapter: new MemoryAdapter(),
-});
-```
+    const t87s = new T87s({
+      adapter: new MemoryAdapter(),
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from t87s import T87s, MemoryAdapter
+
+    t87s = T87s(adapter=MemoryAdapter())
+    ```
+  </TabItem>
+</Tabs>
 
 ## RedisAdapter
 
-For self-hosted production. Requires Redis (or Upstash).
+For self-hosted production. Requires Redis.
 
-```typescript
-import { RedisAdapter } from '@t87s/core';
-import { Redis } from '@upstash/redis';
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { RedisAdapter } from '@t87s/core';
+    import { Redis } from '@upstash/redis';
 
-const t87s = new T87s({
-  adapter: new RedisAdapter({
-    client: new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    }),
-  }),
-});
-```
+    const t87s = new T87s({
+      adapter: new RedisAdapter({
+        client: new Redis({
+          url: process.env.UPSTASH_REDIS_REST_URL,
+          token: process.env.UPSTASH_REDIS_REST_TOKEN,
+        }),
+      }),
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    import os
+    import redis
+    from t87s import T87s
+    from t87s.adapters.redis import RedisAdapter
+
+    # pip install t87s[redis]
+    client = redis.Redis.from_url(os.environ["REDIS_URL"])
+    t87s = T87s(adapter=RedisAdapter(client))
+    ```
+  </TabItem>
+</Tabs>
 
 ## UpstashAdapter
 
 If you're using Upstash, this adapter gives you a smoother DX than the Redis Adapter.
 
-```typescript
-import { UpstashAdapter } from '@t87s/core';
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { UpstashAdapter } from '@t87s/core';
 
-const t87s = new T87s({
-  adapter: new UpstashAdapter({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  }),
-});
-```
+    const t87s = new T87s({
+      adapter: new UpstashAdapter({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      }),
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    import os
+    from upstash_redis import Redis
+    from t87s import T87s
+    from t87s.adapters.upstash import UpstashAdapter
+
+    # pip install t87s[upstash]
+    client = Redis(
+        url=os.environ["UPSTASH_REDIS_REST_URL"],
+        token=os.environ["UPSTASH_REDIS_REST_TOKEN"],
+    )
+    t87s = T87s(adapter=UpstashAdapter(client))
+    ```
+  </TabItem>
+</Tabs>
 
 ## CloudAdapter
 
 Turnkey caching solution with a generous free tier. Fast, offers unmatched concurrency, provides real-time cache optimization via MCP.
 
-```typescript
-import { CloudAdapter } from '@t87s/core';
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { CloudAdapter } from '@t87s/core';
 
-const t87s = new T87s({
-  adapter: new CloudAdapter({
-    apiKey: process.env.T87S_API_KEY,
-  }),
-});
-```
+    const t87s = new T87s({
+      adapter: new CloudAdapter({
+        apiKey: process.env.T87S_API_KEY,
+      }),
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    import os
+    from t87s import T87s
+    from t87s.adapters.cloud import CloudAdapter
+
+    # pip install t87s[cloud]
+    t87s = T87s(adapter=CloudAdapter(api_key=os.environ["T87S_API_KEY"]))
+    ```
+  </TabItem>
+</Tabs>

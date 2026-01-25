@@ -3,29 +3,62 @@ title: Grace Periods
 description: Stale-while-revalidate for resilience
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 Grace periods let you serve stale data when the underlying source fails. Not unlike my middle-school lunch when New Jersey ran out of whatever crap they put between two pieces of "bread".
 
 ## The Problem
 
-```typescript
-const getUser = t87s.query((id) => ({
-  tags: [tags.user(id)],
-  ttl: '10m',
-  fn: () => db.users.findById(id), // What if DB is down?
-}));
-```
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    const getUser = t87s.query((id) => ({
+      tags: [tags.user(id)],
+      ttl: '10m',
+      fn: () => db.users.findById(id), // What if DB is down?
+    }));
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    @t87s.query
+    def get_user(id: str) -> QueryConfig[User]:
+        return QueryConfig(
+            tags=[tags["user"](id)],
+            ttl="10m",
+            fn=lambda: db.users.find_by_id(id),  # What if DB is down?
+        )
+    ```
+  </TabItem>
+</Tabs>
 
 Without grace: if TTL expires and DB is down, users get an error, then a refund, then a lawsuit.
 
 ## The Solution
 
-```typescript
-const getUser = t87s.query((id) => ({
-  tags: [tags.user(id)],
-  ttl: '10m',
-  grace: '6h', // Serve stale data for up to 6 hours if fn fails
-  fn: () => db.users.findById(id),
-}));
-```
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    const getUser = t87s.query((id) => ({
+      tags: [tags.user(id)],
+      ttl: '10m',
+      grace: '6h', // Serve stale data for up to 6 hours if fn fails
+      fn: () => db.users.findById(id),
+    }));
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    @t87s.query
+    def get_user(id: str) -> QueryConfig[User]:
+        return QueryConfig(
+            tags=[tags["user"](id)],
+            ttl="10m",
+            grace="6h",  # Serve stale data for up to 6 hours if fn fails
+            fn=lambda: db.users.find_by_id(id),
+        )
+    ```
+  </TabItem>
+</Tabs>
 
 With grace: when TTL expires, t87s tries to refresh. If that fails and we have stale data within the grace period, we hold our nose and serve the stale data while retrying in the background.

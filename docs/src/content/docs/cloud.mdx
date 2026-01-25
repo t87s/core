@@ -3,6 +3,8 @@ title: t87s Cloud
 description: The sales pitch you've been waiting for
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
 Sometimes, when you vacation in Florida, a glitzy salesman corners you with free coffee and a timeshare pitch. In t87s, that time is now.
 
 ## Why Cloud?
@@ -106,15 +108,29 @@ Let's say you have a small SaaS with 50 daily active users. Each user averages 3
 
 ## Get Started
 
-```typescript
-import { CloudAdapter } from '@t87s/core';
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { CloudAdapter } from '@t87s/core';
 
-const t87s = new T87s({
-  adapter: new CloudAdapter({
-    apiKey: process.env.T87S_API_KEY,
-  }),
-});
-```
+    const t87s = new T87s({
+      adapter: new CloudAdapter({
+        apiKey: process.env.T87S_API_KEY,
+      }),
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    import os
+    from t87s import T87s
+    from t87s.adapters.cloud import CloudAdapter
+
+    # pip install t87s[cloud]
+    t87s = T87s(adapter=CloudAdapter(api_key=os.environ["T87S_API_KEY"]))
+    ```
+  </TabItem>
+</Tabs>
 
 That's it. Same API you already know. Just faster, smarter, and with someone else waking up at 3am.
 
