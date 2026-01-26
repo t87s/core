@@ -33,4 +33,6 @@ benchmarks/results/
 
 # Docs build
 docs/.astro/
+docs/dist/
+docs/.wrangler/
 docs/src/env.d.ts
