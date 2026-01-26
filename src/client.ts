@@ -44,7 +44,7 @@ export class T87s {
       options.defaultGrace === undefined || options.defaultGrace === false
         ? false
         : parseDuration(options.defaultGrace);
-    this.verifyPercent = options.verifyPercent ?? 0;
+    this.verifyPercent = options.verifyPercent ?? 0.1;
     if (this.verifyPercent < 0 || this.verifyPercent > 1) {
       throw new Error('verifyPercent must be between 0 and 1');
     }
