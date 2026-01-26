@@ -36,17 +36,14 @@ describe('CloudAdapter', () => {
       const result = await adapter.get('missing');
 
       expect(result).toBeNull();
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.t87s.dev/v1/cache/get',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer t87s_test',
-          },
-          body: JSON.stringify({ key: 'missing' }),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://api.t87s.dev/v1/cache/get', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer t87s_test',
+        },
+        body: JSON.stringify({ key: 'missing' }),
+      });
     });
 
     it('should return entry for existing key', async () => {
@@ -97,17 +94,14 @@ describe('CloudAdapter', () => {
 
       await adapter.set('key1', entry);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.t87s.dev/v1/cache/set',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer t87s_test',
-          },
-          body: JSON.stringify({ key: 'key1', entry }),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://api.t87s.dev/v1/cache/set', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer t87s_test',
+        },
+        body: JSON.stringify({ key: 'key1', entry }),
+      });
     });
   });
 
@@ -121,17 +115,14 @@ describe('CloudAdapter', () => {
 
       await adapter.delete('key1');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.t87s.dev/v1/cache/delete',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer t87s_test',
-          },
-          body: JSON.stringify({ key: 'key1' }),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://api.t87s.dev/v1/cache/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer t87s_test',
+        },
+        body: JSON.stringify({ key: 'key1' }),
+      });
     });
   });
 
@@ -155,17 +146,14 @@ describe('CloudAdapter', () => {
 
       await adapter.setTagInvalidationTime(['user', '1'], 1000);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.t87s.dev/v1/invalidate',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer t87s_test',
-          },
-          body: JSON.stringify({ tags: [['user', '1']], exact: true }),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://api.t87s.dev/v1/invalidate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer t87s_test',
+        },
+        body: JSON.stringify({ tags: [['user', '1']], exact: true }),
+      });
     });
   });
 
@@ -179,17 +167,14 @@ describe('CloudAdapter', () => {
 
       await adapter.clear();
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.t87s.dev/v1/clear',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer t87s_test',
-          },
-          body: JSON.stringify({}),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://api.t87s.dev/v1/clear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer t87s_test',
+        },
+        body: JSON.stringify({}),
+      });
     });
   });
 
@@ -234,17 +219,14 @@ describe('CloudAdapter', () => {
 
       await adapter.reportVerification('my-key', true, 'hash1', 'hash2');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.t87s.dev/v1/verify',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer t87s_test',
-          },
-          body: expect.stringContaining('"key":"my-key"'),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://api.t87s.dev/v1/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer t87s_test',
+        },
+        body: expect.stringContaining('"key":"my-key"'),
+      });
 
       const body = JSON.parse((mockFetch.mock.calls[0]![1] as { body: string }).body);
       expect(body).toMatchObject({

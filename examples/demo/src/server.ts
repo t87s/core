@@ -90,10 +90,7 @@ async function getUserPostsCached(id: string) {
 
 // Create mutation for updateUser that invalidates user cache
 // Invalidating user(id) will also invalidate userPosts(id) via prefix matching
-const updateUser = cache.mutation(async function updateUser(
-  id: string,
-  data: Partial<User>
-) {
+const updateUser = cache.mutation(async function updateUser(id: string, data: Partial<User>) {
   const result = await db.users.update(id, data);
   return {
     result,
@@ -102,10 +99,7 @@ const updateUser = cache.mutation(async function updateUser(
 });
 
 // Wrap to log invalidation
-async function updateUserWithLog(
-  id: string,
-  data: Partial<User>
-): Promise<User | null> {
+async function updateUserWithLog(id: string, data: Partial<User>): Promise<User | null> {
   const result = await updateUser(id, data);
   output.invalidated([`user:${id}`], 1); // 1 prefix match (userPosts)
   return result;

@@ -26,6 +26,7 @@ pnpm bench
 ## What's Being Compared
 
 Same t87s query with two different adapters:
+
 - **UpstashAdapter** - Direct to Upstash Redis REST API
 - **CloudAdapter** - Through t87s Cloud (Cloudflare Workers + KV)
 
@@ -46,6 +47,7 @@ Cache Miss (same t87s query, different adapter)
 ## Why CloudAdapter Wins
 
 CloudAdapter uses Cloudflare's edge infrastructure:
+
 - **Workers** run at 300+ edge locations globally
 - **KV** is replicated across the edge with low-latency reads
 - Requests hit the nearest edge, not a central region

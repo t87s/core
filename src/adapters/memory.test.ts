@@ -109,15 +109,39 @@ describe('MemoryAdapter', () => {
     it('should refresh LRU order on get', async () => {
       const adapter = new MemoryAdapter({ maxItems: 3 });
 
-      await adapter.set('key1', { value: 1, tags: [], createdAt: Date.now(), expiresAt: Date.now() + 10000, graceUntil: null });
-      await adapter.set('key2', { value: 2, tags: [], createdAt: Date.now(), expiresAt: Date.now() + 10000, graceUntil: null });
-      await adapter.set('key3', { value: 3, tags: [], createdAt: Date.now(), expiresAt: Date.now() + 10000, graceUntil: null });
+      await adapter.set('key1', {
+        value: 1,
+        tags: [],
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 10000,
+        graceUntil: null,
+      });
+      await adapter.set('key2', {
+        value: 2,
+        tags: [],
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 10000,
+        graceUntil: null,
+      });
+      await adapter.set('key3', {
+        value: 3,
+        tags: [],
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 10000,
+        graceUntil: null,
+      });
 
       // Access key1 to make it recently used
       await adapter.get('key1');
 
       // Add key4 - key2 should be evicted (oldest unused)
-      await adapter.set('key4', { value: 4, tags: [], createdAt: Date.now(), expiresAt: Date.now() + 10000, graceUntil: null });
+      await adapter.set('key4', {
+        value: 4,
+        tags: [],
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 10000,
+        graceUntil: null,
+      });
 
       expect(await adapter.get('key1')).not.toBeNull();
       expect(await adapter.get('key2')).toBeNull(); // evicted

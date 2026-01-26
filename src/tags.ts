@@ -7,6 +7,7 @@ export type Tag = string[] & { readonly [TAG_BRAND]: true };
 /**
  * Tag definition: a function that returns a tag path.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TagDefinition = (...args: any[]) => (string | number)[];
 
 /**
@@ -40,7 +41,8 @@ export function defineTags<T extends Record<string, TagDefinition>>(
   const factories = {} as TagFactories<T>;
 
   for (const [name, definition] of Object.entries(definitions)) {
-    (factories as any)[name] = (...args: any[]) => createTag(definition(...args));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (factories as any)[name] = (...args: unknown[]) => createTag(definition(...args));
   }
 
   return factories;
@@ -61,9 +63,7 @@ export function isTagPrefix(prefix: string[], tag: string[]): boolean {
  * Uses backslash escaping: \\ for literal backslash, \: for literal colon
  */
 export function serializeTag(tag: string[]): string {
-  return tag
-    .map((part) => part.replace(/\\/g, '\\\\').replace(/:/g, '\\:'))
-    .join(':');
+  return tag.map((part) => part.replace(/\\/g, '\\\\').replace(/:/g, '\\:')).join(':');
 }
 
 /**

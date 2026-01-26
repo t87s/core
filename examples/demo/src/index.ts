@@ -45,7 +45,9 @@ async function runDemo(): Promise<void> {
 
   // Step 5: Update user name
   output.step(5, 'Update user name (triggers invalidation)');
-  output.curl(`curl -X PUT -H "Content-Type: application/json" -d '{"name":"Alice Updated"}' ${BASE_URL}/users/123`);
+  output.curl(
+    `curl -X PUT -H "Content-Type: application/json" -d '{"name":"Alice Updated"}' ${BASE_URL}/users/123`
+  );
   await fetch(`${BASE_URL}/users/123`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

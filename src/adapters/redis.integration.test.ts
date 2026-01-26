@@ -10,9 +10,7 @@ describe('RedisAdapter integration', () => {
   let adapter: RedisAdapter;
 
   beforeAll(async () => {
-    container = await new GenericContainer('redis:7-alpine')
-      .withExposedPorts(6379)
-      .start();
+    container = await new GenericContainer('redis:7-alpine').withExposedPorts(6379).start();
 
     redis = new Redis({
       host: container.getHost(),
@@ -116,7 +114,7 @@ describe('RedisAdapter integration', () => {
     expect(await adapter.get('expiring')).not.toBeNull();
 
     // Wait for expiration
-    await new Promise(r => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 150));
 
     // Should be gone
     expect(await adapter.get('expiring')).toBeNull();

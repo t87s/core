@@ -43,12 +43,7 @@ export class RedisAdapter implements StorageAdapter {
 
   async set<T>(key: string, entry: CacheEntry<T>): Promise<void> {
     const expireAt = entry.graceUntil ?? entry.expiresAt;
-    await this.client.set(
-      this.cacheKey(key),
-      JSON.stringify(entry),
-      'PXAT',
-      expireAt
-    );
+    await this.client.set(this.cacheKey(key), JSON.stringify(entry), 'PXAT', expireAt);
   }
 
   async delete(key: string): Promise<void> {
@@ -72,13 +67,7 @@ export class RedisAdapter implements StorageAdapter {
     let cursor = '0';
 
     do {
-      const [nextCursor, keys] = await this.client.scan(
-        cursor,
-        'MATCH',
-        pattern,
-        'COUNT',
-        1000
-      );
+      const [nextCursor, keys] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 1000);
       cursor = nextCursor;
 
       if (keys.length > 0) {

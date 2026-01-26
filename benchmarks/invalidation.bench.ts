@@ -57,9 +57,7 @@ describe('Invalidation', () => {
 
   bench('bulk invalidation (10 tags)', async () => {
     const base = counter++ % 90;
-    const tagsToInvalidate = Array.from({ length: 10 }, (_, i) =>
-      tags.user(`user-${base + i}`)
-    );
+    const tagsToInvalidate = Array.from({ length: 10 }, (_, i) => tags.user(`user-${base + i}`));
     await t87s.invalidate(tagsToInvalidate);
   });
 });

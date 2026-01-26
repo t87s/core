@@ -5,8 +5,7 @@ import { Redis } from '@upstash/redis';
 // Environment variables
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-const T87S_CLOUD_URL =
-  process.env.T87S_CLOUD_URL || 'https://t87s-cloud.mike-solomon.workers.dev';
+const T87S_CLOUD_URL = process.env.T87S_CLOUD_URL || 'https://t87s-cloud.mike-solomon.workers.dev';
 const T87S_API_KEY = process.env.T87S_API_KEY || 't87s_bench_test_key';
 
 if (!UPSTASH_URL || !UPSTASH_TOKEN) {

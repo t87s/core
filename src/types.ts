@@ -24,7 +24,12 @@ export interface StorageAdapter {
   clear(): Promise<void>;
   disconnect(): Promise<void>;
   /** Report verification result (staleness detection). Only implemented by CloudAdapter. */
-  reportVerification?(key: string, isStale: boolean, cachedHash: string, freshHash: string): Promise<void>;
+  reportVerification?(
+    key: string,
+    isStale: boolean,
+    cachedHash: string,
+    freshHash: string
+  ): Promise<void>;
 }
 
 /**

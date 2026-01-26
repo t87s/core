@@ -22,7 +22,7 @@ export class CloudAdapter implements StorageAdapter {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify(body),
     });
@@ -36,10 +36,7 @@ export class CloudAdapter implements StorageAdapter {
   }
 
   async get<T>(key: string): Promise<CacheEntry<T> | null> {
-    const response = await this.request<{ entry: CacheEntry<T> | null }>(
-      '/v1/cache/get',
-      { key }
-    );
+    const response = await this.request<{ entry: CacheEntry<T> | null }>('/v1/cache/get', { key });
     return response.entry as CacheEntry<T> | null;
   }
 
@@ -51,7 +48,7 @@ export class CloudAdapter implements StorageAdapter {
     await this.request<{ ok: true }>('/v1/cache/delete', { key });
   }
 
-  async getTagInvalidationTime(tag: string[]): Promise<number | null> {
+  async getTagInvalidationTime(_tag: string[]): Promise<number | null> {
     // Note: This is rarely called directly. The cloud service checks
     // tag invalidation times server-side during get().
     // This method is mainly for debugging.
@@ -60,14 +57,14 @@ export class CloudAdapter implements StorageAdapter {
     return null;
   }
 
-  async setTagInvalidationTime(tag: string[], timestamp: number): Promise<void> {
+  async setTagInvalidationTime(tag: string[], _timestamp: number): Promise<void> {
     // Invalidation is done via /v1/invalidate endpoint.
     // This method is called by the client's mutation(), which should
     // call invalidate() instead.
-    await this.request<{ ok: true; invalidatedAt: number }>(
-      '/v1/invalidate',
-      { tags: [tag], exact: true }
-    );
+    await this.request<{ ok: true; invalidatedAt: number }>('/v1/invalidate', {
+      tags: [tag],
+      exact: true,
+    });
   }
 
   async clear(): Promise<void> {

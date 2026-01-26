@@ -66,10 +66,10 @@ export class UpstashAdapter implements StorageAdapter {
 
     do {
       // Upstash scan returns [cursor, keys]
-      const [nextCursor, keys] = await this.client.scan(cursor, {
+      const [nextCursor, keys] = (await this.client.scan(cursor, {
         match: pattern,
         count: 1000,
-      }) as [number | string, string[]];
+      })) as [number | string, string[]];
       cursor = nextCursor;
 
       if (keys.length > 0) {

@@ -32,10 +32,10 @@ const updateUser = t87s.mutation(async (id: string, data: UserUpdate) => {
 });
 
 // That's it. The cache handles the rest.
-await getUser('123');        // cache miss, fetches from DB
-await getUser('123');        // cache hit, instant
+await getUser('123'); // cache miss, fetches from DB
+await getUser('123'); // cache hit, instant
 await updateUser('123', {}); // invalidates user:123
-await getUser('123');        // cache miss again, refetches
+await getUser('123'); // cache miss again, refetches
 ```
 
 ## Go read the docs

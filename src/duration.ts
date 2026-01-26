@@ -21,7 +21,9 @@ export function parseDuration(value: Duration): number {
 
   const match = value.match(/^(\d+)(s|m|h|d)$/);
   if (!match) {
-    throw new Error(`Invalid duration format: "${value}". Use number or string like "30s", "5m", "1h", "1d".`);
+    throw new Error(
+      `Invalid duration format: "${value}". Use number or string like "30s", "5m", "1h", "1d".`
+    );
   }
 
   const [, amount, unit] = match;

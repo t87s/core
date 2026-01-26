@@ -382,7 +382,7 @@ describe('T87s', () => {
       await getUser('123');
       await getUser('123');
 
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
       expect(reportVerification).not.toHaveBeenCalled();
       expect(callCount).toBe(1); // fn only called once (initial fetch)
     });
@@ -403,7 +403,7 @@ describe('T87s', () => {
       await getUser('123');
       await getUser('123');
 
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
       expect(callCount).toBe(1); // fn only called once, no verification
     });
 
@@ -474,7 +474,7 @@ describe('T87s', () => {
       mathRandomSpy.mockReturnValueOnce(0.7);
       await getUser('123');
 
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
       expect(reportVerification).toHaveBeenCalledTimes(1); // Still 1
 
       mathRandomSpy.mockRestore();

@@ -16,9 +16,7 @@ describe('T87s with RedisAdapter', () => {
   });
 
   beforeAll(async () => {
-    container = await new GenericContainer('redis:7-alpine')
-      .withExposedPorts(6379)
-      .start();
+    container = await new GenericContainer('redis:7-alpine').withExposedPorts(6379).start();
 
     redis = new Redis({
       host: container.getHost(),

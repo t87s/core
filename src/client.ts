@@ -1,4 +1,11 @@
-import type { T87sOptions, StorageAdapter, QueryConfig, MutationResult, CacheEntry, Tag } from './types.js';
+import type {
+  T87sOptions,
+  StorageAdapter,
+  QueryConfig,
+  MutationResult,
+  CacheEntry,
+  Tag,
+} from './types.js';
 import { parseDuration } from './duration.js';
 
 const DEFAULT_TTL = '30s';
@@ -33,9 +40,10 @@ export class T87s {
     this.adapter = options.adapter;
     this.prefix = options.prefix ?? 't87s';
     this.defaultTtl = parseDuration(options.defaultTtl ?? DEFAULT_TTL);
-    this.defaultGrace = options.defaultGrace === undefined || options.defaultGrace === false
-      ? false
-      : parseDuration(options.defaultGrace);
+    this.defaultGrace =
+      options.defaultGrace === undefined || options.defaultGrace === false
+        ? false
+        : parseDuration(options.defaultGrace);
     this.verifyPercent = options.verifyPercent ?? 0;
     if (this.verifyPercent < 0 || this.verifyPercent > 1) {
       throw new Error('verifyPercent must be between 0 and 1');
@@ -177,9 +185,10 @@ export class T87s {
     staleEntry?: CacheEntry<TResult>
   ): Promise<TResult> {
     const ttl = parseDuration(config.ttl ?? this.defaultTtl);
-    const grace = config.grace === false || config.grace === undefined
-      ? this.defaultGrace
-      : parseDuration(config.grace);
+    const grace =
+      config.grace === false || config.grace === undefined
+        ? this.defaultGrace
+        : parseDuration(config.grace);
     const now = Date.now();
 
     try {
