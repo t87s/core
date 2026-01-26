@@ -3,11 +3,11 @@ import { T87s } from './client.js';
 import { CloudAdapter } from './adapters/cloud.js';
 import { defineTags } from './tags.js';
 
-// Skip if no API key provided
-const API_KEY = process.env['T87S_API_KEY'] ?? 't87s_dev_test_key_12345';
+// Skip E2E tests if no API key provided
+const API_KEY = process.env['T87S_API_KEY'];
 const BASE_URL = process.env['T87S_BASE_URL'] ?? 'https://api.t87s.dev';
 
-describe('T87s with CloudAdapter (E2E)', () => {
+describe.skipIf(!API_KEY)('T87s with CloudAdapter (E2E)', () => {
   let t87s: T87s;
   let testPrefix: string;
 
@@ -19,7 +19,7 @@ describe('T87s with CloudAdapter (E2E)', () => {
   beforeEach(async () => {
     // Use unique prefix per test run to avoid cache collision
     testPrefix = `test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const adapter = new CloudAdapter({ apiKey: API_KEY, baseUrl: BASE_URL });
+    const adapter = new CloudAdapter({ apiKey: API_KEY!, baseUrl: BASE_URL });
     await adapter.clear();
     t87s = new T87s({ adapter, prefix: testPrefix });
   });
