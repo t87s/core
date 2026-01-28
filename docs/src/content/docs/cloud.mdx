@@ -49,8 +49,8 @@ curl -X POST https://api.t87s.dev/v1/query \
 - `is_stale` (INTEGER) - 1 if stale, 0 if fresh
 - `timestamp` (TEXT) - ISO8601 timestamp
 
-**`cache_operations`** - Invalidations and clears.
-- `type` (TEXT) - 'invalidate' or 'clear'
+**`cache_operations`** - All cache operations.
+- `type` (TEXT) - 'hit', 'miss', 'set', or 'invalidate'
 - `key` (TEXT) - The affected cache key
 - `timestamp` (TEXT) - ISO8601 timestamp
 
