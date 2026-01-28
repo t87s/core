@@ -33,53 +33,56 @@ Yes, we're faster than Redis for a globally distributed app. No, we didn't stack
 
 ## The API
 
-The intelligence API has two endpoints.
-
-**`POST /v1/issues`** - Returns detected problems, sorted by severity.
+Query your cache analytics with SQL via `POST /v1/query`.
 
 ```bash
-curl -X POST https://api.t87s.dev/v1/issues \
-  -H "Authorization: Bearer $T87S_API_KEY"
+curl -X POST https://api.t87s.dev/v1/query \
+  -H "Authorization: Bearer $T87S_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"sql": "SELECT * FROM verifications LIMIT 10"}'
 ```
 
-```json
-{
-  "issues": [
-    {
-      "id": "staleness:product:456",
-      "type": "staleness",
-      "severity": "critical",
-      "key": "product:456",
-      "description": "Cache key \"product:456\" has a 35.2% stale rate (352/1000 samples)",
-      "detectedAt": 1706123456
-    }
-  ]
-}
+### Available Tables
+
+**`verifications`** - Every cache staleness check.
+- `key` (TEXT) - The cache key checked
+- `is_stale` (INTEGER) - 1 if stale, 0 if fresh
+- `timestamp` (TEXT) - ISO8601 timestamp
+
+**`cache_operations`** - Invalidations and clears.
+- `type` (TEXT) - 'invalidate' or 'clear'
+- `key` (TEXT) - The affected cache key
+- `timestamp` (TEXT) - ISO8601 timestamp
+
+### Example Queries
+
+**Find keys with high stale rates:**
+```sql
+SELECT key, COUNT(*) as checks, SUM(is_stale) as stale,
+       ROUND(100.0 * SUM(is_stale) / COUNT(*), 1) as stale_pct
+FROM verifications
+GROUP BY key
+HAVING stale_pct > 10
+ORDER BY stale_pct DESC
 ```
 
-**`POST /v1/stats`** - Returns aggregated cache statistics.
-
-```bash
-curl -X POST https://api.t87s.dev/v1/stats \
-  -H "Authorization: Bearer $T87S_API_KEY"
+**Recent invalidations:**
+```sql
+SELECT * FROM cache_operations
+WHERE type = 'invalidate'
+ORDER BY timestamp DESC
+LIMIT 20
 ```
 
-```json
-{
-  "stats": {
-    "totalVerifications": 4521,
-    "totalKeys": 23,
-    "totalStale": 142,
-    "staleRate": 0.031,
-    "keyStats": [
-      { "key": "user:*", "totalSamples": 1200, "staleCount": 12, "lastUpdated": 1706123456 },
-      { "key": "product:*", "totalSamples": 890, "staleCount": 89, "lastUpdated": 1706123400 }
-    ]
-  }
-}
+**Hourly verification volume:**
+```sql
+SELECT strftime('%Y-%m-%d %H:00', timestamp) as hour,
+       COUNT(*) as checks
+FROM verifications
+GROUP BY hour
+ORDER BY hour DESC
+LIMIT 24
 ```
-
-Severity thresholds: **critical** (>30% stale), **warning** (>20%), **info** (>10%).
 
 ## Using with LLMs
 
