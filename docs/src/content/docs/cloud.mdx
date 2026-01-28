@@ -17,7 +17,7 @@ Our cloud is:
 
 **Scalable.** We're built on Cloudflare using their globally distributed network.
 
-**Smart.** Real-time cache optimization via MCP. We analyze your cache patterns and auto-tune TTLs so you don't have to guess.
+**Smart.** Real-time cache optimization via AI analysis. We analyze your cache patterns and auto-tune TTLs so you don't have to guess.
 
 **Simple.** One API key. No Redis cluster to babysit.
 
@@ -81,22 +81,20 @@ curl -X POST https://api.t87s.dev/v1/stats \
 
 Severity thresholds: **critical** (>30% stale), **warning** (>20%), **info** (>10%).
 
-## The MCP
+## Using with LLMs
 
-The MCP server exposes two tools that wrap the API above:
+The Query Explorer includes a "Prompt for LLMs" button that copies your API key and documentation to your clipboard. Paste it into Claude, ChatGPT, Cursor, or any AI assistant to analyze your cache patterns.
 
-- **`t87s_get_stats`** - Cache verification statistics: total verifications, staleness rate, per-key breakdown.
-- **`t87s_get_issues`** - Detected staleness issues. Accepts optional `severity` filter (critical, warning, info).
-
-Add the MCP server to your IDE, then once or twice a week ask: "What cache issues do I have?" or "Show me my cache stats." or "What missing invalidation could be provoking the cache miss on users:\<id\>"
-
-The MCP will return the raw data. From there, you can ask follow-up questions: "Which keys have the highest stale rate?" or "Should I increase the TTL on user:* keys?"
+Ask questions like:
+- "What cache issues do I have?"
+- "Which keys have the highest stale rate?"
+- "Should I increase the TTL on user:* keys?"
 
 ## Dumb Cache Strategy
 
 Here's a secret: you don't have to think about tags at all.
 
-One popular approach is "dumb cache" - wrap everything in a cache call without any tags, deploy to production, and let it run for 48-72 hours. Then, use our MCP and your coding agent to analyze your actual traffic patterns and tell you exactly which operations benefit from caching and what TTLs make sense.
+One popular approach is "dumb cache" - wrap everything in a cache call without any tags, deploy to production, and let it run for 48-72 hours. Then, use the "Prompt for LLMs" button and your favorite AI assistant to analyze your actual traffic patterns and tell you exactly which operations benefit from caching and what TTLs make sense.
 
 ## Pricing
 
