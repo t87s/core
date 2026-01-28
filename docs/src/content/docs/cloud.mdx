@@ -93,11 +93,7 @@ Ask questions like:
 - "Which keys have the highest stale rate?"
 - "Should I increase the TTL on user:* keys?"
 
-## Dumb Cache Strategy
-
-Here's a secret: you don't have to think about tags at all.
-
-One popular approach is "dumb cache" - wrap everything in a cache call without any tags, deploy to production, and let it run for 48-72 hours. Then, use the "Prompt for LLMs" button and your favorite AI assistant to analyze your actual traffic patterns and tell you exactly which operations benefit from caching and what TTLs make sense.
+For the supremely lazy and crafty dev, one popular approach is the "dumb cache" - wrap everything in a cache call without any tags, deploy to production, and let it run for 48-72 hours. Then, use the "Prompt for LLMs" button and your favorite AI assistant to analyze your actual traffic patterns and tell you exactly which operations benefit from caching and what TTLs make sense.
 
 ## Pricing
 
