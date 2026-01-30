@@ -26,14 +26,6 @@ export {
 } from './primitives.js';
 
 // =============================================================================
-// CacheEngine (DEPRECATED - use Primitives instead)
-// =============================================================================
-/**
- * @deprecated Use createPrimitives instead. CacheEngine will be removed in the next major version.
- */
-export { CacheEngine, type CacheEngineOptions, type QueryOptions } from './cache-engine.js';
-
-// =============================================================================
 // Tags (utilities, keep for backward compat if needed)
 // =============================================================================
 export { serializeTag, deserializeTag, isTagPrefix } from './tags.js';
