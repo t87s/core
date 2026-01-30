@@ -53,22 +53,3 @@ export type { Tag, CacheEntry, Duration, StorageAdapter } from './types.js';
 // Utilities
 // =============================================================================
 export { parseDuration } from './duration.js';
-
-// =============================================================================
-// DEPRECATED - Remove in next major version
-// =============================================================================
-
-/**
- * @deprecated Use QueryCache instead. T87s will be removed in the next major version.
- */
-export { T87s } from './client.js';
-
-/**
- * @deprecated Use schema builders (at, wild) instead. defineTags will be removed in the next major version.
- */
-export { defineTags } from './tags.js';
-
-/**
- * @deprecated These types will be removed in the next major version.
- */
-export type { T87sOptions, QueryConfig, MutationResult } from './types.js';

@@ -1,52 +1,8 @@
 /**
- * Opaque type for tags. Created via defineTags() to ensure type safety.
+ * Opaque type for tags.
  */
 declare const TAG_BRAND: unique symbol;
 export type Tag = string[] & { readonly [TAG_BRAND]: true };
-
-/**
- * Tag definition: a function that returns a tag path.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type TagDefinition = (...args: any[]) => (string | number)[];
-
-/**
- * Mapped type that converts tag definitions to tag factories.
- */
-type TagFactories<T extends Record<string, TagDefinition>> = {
-  [K in keyof T]: (...args: Parameters<T[K]>) => Tag;
-};
-
-/**
- * Create a Tag from parts. Internal use only.
- */
-function createTag(parts: (string | number)[]): Tag {
-  return parts.map(String) as Tag;
-}
-
-/**
- * Define a centralized set of cache tags.
- *
- * @example
- * ```typescript
- * const tags = defineTags({
- *   user: (id: string) => ['user', id],
- *   userPosts: (id: string) => ['user', id, 'posts'],
- * });
- * ```
- */
-export function defineTags<T extends Record<string, TagDefinition>>(
-  definitions: T
-): TagFactories<T> {
-  const factories = {} as TagFactories<T>;
-
-  for (const [name, definition] of Object.entries(definitions)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (factories as any)[name] = (...args: unknown[]) => createTag(definition(...args));
-  }
-
-  return factories;
-}
 
 /**
  * Check if a tag is a prefix of another tag.
