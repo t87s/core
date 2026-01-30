@@ -30,5 +30,4 @@ export interface StorageAdapter {
 }
 
 // Re-export for convenience
-export type { Tag } from './tags.js';
 export type { Duration } from './duration.js';
