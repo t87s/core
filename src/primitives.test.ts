@@ -244,9 +244,24 @@ describe('Primitives', () => {
 
       // Launch concurrent queries
       const [result1, result2, result3] = await Promise.all([
-        primitives.query({ key: 'user:1', tags: [['users', '1']], fn: fetchFn, ttl: '1m' }),
-        primitives.query({ key: 'user:1', tags: [['users', '1']], fn: fetchFn, ttl: '1m' }),
-        primitives.query({ key: 'user:1', tags: [['users', '1']], fn: fetchFn, ttl: '1m' }),
+        primitives.query<{ count: number }>({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          ttl: '1m',
+        }),
+        primitives.query<{ count: number }>({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          ttl: '1m',
+        }),
+        primitives.query<{ count: number }>({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          ttl: '1m',
+        }),
       ]);
 
       expect(fetchFn).toHaveBeenCalledTimes(1);
@@ -268,7 +283,7 @@ describe('Primitives', () => {
 
       await primitives.invalidate([['users', '1']]);
 
-      const result = await primitives.query({
+      const result = await primitives.query<{ count: number }>({
         key: 'user:1',
         tags: [['users', '1']],
         fn: fetchFn,
@@ -323,7 +338,7 @@ describe('Primitives', () => {
       await new Promise((r) => setTimeout(r, 10)); // Expire TTL but within grace
 
       // Should return stale value immediately
-      const result = await customPrimitives.query({
+      const result = await customPrimitives.query<{ count: number }>({
         key: 'user:1',
         tags: [['users', '1']],
         fn: fetchFn,
@@ -351,7 +366,7 @@ describe('Primitives', () => {
 
       await new Promise((r) => setTimeout(r, 10));
 
-      const result = await customPrimitives.query({
+      const result = await customPrimitives.query<{ count: number }>({
         key: 'user:1',
         tags: [['users', '1']],
         fn: fetchFn,
