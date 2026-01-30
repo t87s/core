@@ -1,5 +1,5 @@
 // src/primitives.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createPrimitives, type Primitives } from './primitives.js';
 import { MemoryAdapter } from './adapters/index.js';
 
@@ -209,5 +209,175 @@ describe('Primitives', () => {
     expect(result1).toBeNull();
     expect(result2).toBeNull();
     expect(result3).toEqual({ c: 3 });
+  });
+
+  describe('query()', () => {
+    it('caches query results', async () => {
+      const fetchFn = vi.fn().mockResolvedValue({ id: '1', name: 'Test' });
+
+      const result1 = await primitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+        ttl: '1m',
+      });
+
+      const result2 = await primitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+        ttl: '1m',
+      });
+
+      expect(result1).toEqual({ id: '1', name: 'Test' });
+      expect(result2).toEqual({ id: '1', name: 'Test' });
+      expect(fetchFn).toHaveBeenCalledTimes(1); // Cached
+    });
+
+    it('stampede protection - concurrent requests share single fetch', async () => {
+      let callCount = 0;
+      const fetchFn = vi.fn().mockImplementation(async () => {
+        callCount++;
+        await new Promise((r) => setTimeout(r, 50));
+        return { count: callCount };
+      });
+
+      // Launch concurrent queries
+      const [result1, result2, result3] = await Promise.all([
+        primitives.query({ key: 'user:1', tags: [['users', '1']], fn: fetchFn, ttl: '1m' }),
+        primitives.query({ key: 'user:1', tags: [['users', '1']], fn: fetchFn, ttl: '1m' }),
+        primitives.query({ key: 'user:1', tags: [['users', '1']], fn: fetchFn, ttl: '1m' }),
+      ]);
+
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(result1.count).toBe(1);
+      expect(result2.count).toBe(1);
+      expect(result3.count).toBe(1);
+    });
+
+    it('invalidation triggers refetch', async () => {
+      let counter = 0;
+      const fetchFn = vi.fn().mockImplementation(() => Promise.resolve({ count: ++counter }));
+
+      await primitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+        ttl: '1m',
+      });
+
+      await primitives.invalidate([['users', '1']]);
+
+      const result = await primitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+        ttl: '1m',
+      });
+
+      expect(result.count).toBe(2);
+    });
+
+    it('uses default TTL from primitives options', async () => {
+      const customPrimitives = createPrimitives({
+        adapter,
+        defaultTtl: 1, // 1ms
+      });
+
+      const fetchFn = vi.fn().mockResolvedValue({ id: '1' });
+
+      await customPrimitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+        // No ttl specified - should use default
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      await customPrimitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+      });
+
+      expect(fetchFn).toHaveBeenCalledTimes(2); // Expired, refetched
+    });
+
+    it('grace period serves stale while refreshing in background', async () => {
+      const customPrimitives = createPrimitives({
+        adapter,
+        defaultTtl: 1, // 1ms
+        defaultGrace: 10000, // 10s grace
+      });
+
+      let counter = 0;
+      const fetchFn = vi.fn().mockImplementation(() => Promise.resolve({ count: ++counter }));
+
+      await customPrimitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+      });
+
+      await new Promise((r) => setTimeout(r, 10)); // Expire TTL but within grace
+
+      // Should return stale value immediately
+      const result = await customPrimitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+      });
+
+      expect(result.count).toBe(1); // Stale value
+      // Background refresh may have triggered
+    });
+
+    it('grace: false disables grace period', async () => {
+      const customPrimitives = createPrimitives({
+        adapter,
+        defaultTtl: 1,
+        defaultGrace: false,
+      });
+
+      let counter = 0;
+      const fetchFn = vi.fn().mockImplementation(() => Promise.resolve({ count: ++counter }));
+
+      await customPrimitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      const result = await customPrimitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: fetchFn,
+      });
+
+      expect(result.count).toBe(2); // No grace, must refetch
+    });
+
+    it('different keys are cached separately', async () => {
+      const fetchFn = vi.fn().mockImplementation((id: string) => Promise.resolve({ id }));
+
+      await primitives.query({
+        key: 'user:1',
+        tags: [['users', '1']],
+        fn: () => fetchFn('1'),
+        ttl: '1m',
+      });
+
+      await primitives.query({
+        key: 'user:2',
+        tags: [['users', '2']],
+        fn: () => fetchFn('2'),
+        ttl: '1m',
+      });
+
+      expect(fetchFn).toHaveBeenCalledTimes(2);
+    });
   });
 });

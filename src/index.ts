@@ -22,11 +22,15 @@ export {
   type Primitives,
   type PrimitivesOptions,
   type SetOptions,
+  type QueryOptions as PrimitivesQueryOptions,
 } from './primitives.js';
 
 // =============================================================================
-// CacheEngine (advanced usage)
+// CacheEngine (DEPRECATED - use Primitives instead)
 // =============================================================================
+/**
+ * @deprecated Use createPrimitives instead. CacheEngine will be removed in the next major version.
+ */
 export { CacheEngine, type CacheEngineOptions, type QueryOptions } from './cache-engine.js';
 
 // =============================================================================

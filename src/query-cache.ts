@@ -8,7 +8,6 @@ import type {
   QueriesToMethods,
   TypedTag,
 } from './query-cache-types.js';
-import { CacheEngine } from './cache-engine.js';
 import { createTagBuilder } from './tag-builder.js';
 import { createPrimitives, type Primitives } from './primitives.js';
 
@@ -57,7 +56,7 @@ export type QueryCacheClient<Schema, Q extends QueryRecord> = QueriesToMethods<Q
 export function QueryCache<Schema, Q extends QueryRecord>(
   options: QueryCacheOptions<Schema, Q>
 ): QueryCacheClient<Schema, Q> {
-  const engine = new CacheEngine({
+  const primitives = createPrimitives({
     adapter: options.adapter,
     prefix: options.prefix ?? 'qc',
     defaultTtl: options.defaultTtl,
@@ -66,10 +65,6 @@ export function QueryCache<Schema, Q extends QueryRecord>(
   });
 
   const tags = createTagBuilder(options.schema);
-  const primitives = createPrimitives({
-    adapter: options.adapter,
-    prefix: options.prefix ?? 'qc',
-  });
 
   // Build query methods from the factory
   const queryDefs = options.queries(tags);
@@ -78,7 +73,7 @@ export function QueryCache<Schema, Q extends QueryRecord>(
   for (const [name, queryFn] of Object.entries(queryDefs)) {
     methods[name] = async (...args: unknown[]) => {
       const def = queryFn(...args) as TypedQueryDef<unknown>;
-      return engine.query({
+      return primitives.query({
         key: `${name}:${JSON.stringify(args)}`,
         tags: def.tags.map((t) => (t as TypedTag).__path),
         fn: def.fn,
@@ -93,9 +88,9 @@ export function QueryCache<Schema, Q extends QueryRecord>(
     tags,
     primitives,
     invalidate: async (tag: TypedTag, exact?: boolean) => {
-      await engine.invalidate([(tag as TypedTag).__path], exact ?? false);
+      await primitives.invalidate([(tag as TypedTag).__path], exact ?? false);
     },
-    clear: () => engine.clear(),
-    disconnect: () => engine.disconnect(),
+    clear: () => primitives.clear(),
+    disconnect: () => primitives.disconnect(),
   } as QueryCacheClient<Schema, Q>;
 }
