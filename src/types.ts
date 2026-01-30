@@ -34,6 +34,7 @@ export interface StorageAdapter {
 
 /**
  * Options for T87s client initialization.
+ * @deprecated Use QueryCacheOptions instead. T87sOptions will be removed in the next major version.
  */
 export interface T87sOptions {
   adapter: StorageAdapter;
@@ -46,6 +47,7 @@ export interface T87sOptions {
 
 /**
  * Configuration returned from a query factory.
+ * @deprecated Use TypedQueryDef instead. QueryConfig will be removed in the next major version.
  */
 export interface QueryConfig<T> {
   tags: Tag[];
@@ -56,6 +58,7 @@ export interface QueryConfig<T> {
 
 /**
  * Result returned from a mutation function.
+ * @deprecated MutationResult will be removed in the next major version.
  */
 export interface MutationResult<T> {
   result: T;
