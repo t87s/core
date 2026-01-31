@@ -1,12 +1,28 @@
 ---
 title: Cache
-description: Why caching is the only cheat code that actually works
+description: The $440 million lesson you'd rather learn from someone else
 ---
 
-Caching is how grown-up systems stay fast without lying. The trick is simple: you keep the expensive work close by, so the next request is a short walk instead of a cross-country flight.
+In 2010, Facebook went dark for hours. The cause? A cache invalidation bug. Their automated system tried to fix an invalid config value in cache, but the fix required a database query. Every client saw the bad value simultaneously. Every client tried to fix it simultaneously. Hundreds of thousands of queries per second hammered the database cluster until it collapsed. Facebook had to turn off the entire site to recover.
 
-Every serious company does this. The feed that loads instantly? Cached. The dashboard that doesn't spin forever? Cached. The "Continue Watching" row that appears before your coffee cools? Cached. Nobody recomputes that from scratch, because users don't wait and databases don't stretch.
+This is what happens when caching goes wrong.
 
-Caching isn't about being clever. It's about being honest. You trade a little staleness for a lot of speed, then you put guardrails around what "stale" even means. That's the whole game.
+## When caching goes right
 
-t87s exists to make that trade explicit. You declare what's allowed to go stale, you invalidate what must not, and you stop guessing.
+Netflix serves 260 million subscribers across 190 countries. Their EVCache system handles 400 million operations per second across 22,000 servers. When a show like *Stranger Things* drops, they pre-warm the cache with predicted content keys hours before release. Result: 99.99% cache hit rate. Ten million people hit play, and the database barely notices.
+
+Twitter learned their lessons the hard way too. Dan Luu documented [a decade of cache incidents](https://danluu.com/cache-incidents/) there—connection limits that caused cascading failures, hot shards that melted under load, the works. The pattern is consistent: when you design for cache, your database can't handle the traffic anymore. That's not a bug, that's the point. But it means cache failures become total outages.
+
+## The thundering herd
+
+Here's a scenario: your product page cache expires. At that exact moment, 500,000 requests arrive. Every single one sees the cache miss. Every single one hits your database. Your DB CPU spikes to 98%, response times balloon from 20ms to 4,500ms, checkout pages start timing out. An 8-minute outage that costs $10 million in lost sales.
+
+This is called a cache stampede, and it happens more often than anyone admits. The fix isn't complicated—stagger your expirations with jitter, use request coalescing so only one request actually rebuilds the cache—but you have to know it's a problem before you can solve it.
+
+## The deal
+
+Caching is a trade. You accept a little staleness in exchange for a lot of speed. The question isn't whether to cache—if you're reading this, you probably should. The question is: what's allowed to be stale, for how long, and what happens when the answer changes?
+
+t87s exists to make that trade explicit. You declare tags that describe your data's dependencies. When something changes, you invalidate the tags. The cache figures out what needs to go. You stop guessing and start sleeping through the night.
+
+The primitives are simple: TTL for the clock, tags for the relationships, grace periods for the edge cases. The rest is just putting them together in a way that matches how your data actually moves.
