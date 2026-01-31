@@ -1,6 +1,6 @@
 {
   "name": "@t87s/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Declarative cache invalidation",
   "type": "module",
   "main": "./dist/index.js",
