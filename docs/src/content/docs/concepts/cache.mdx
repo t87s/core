@@ -5,7 +5,11 @@ description: The $440 million lesson you'd rather learn from someone else
 
 Netflix serves 260 million subscribers across 190 countries. Their EVCache system handles 400 million operations per second across 22,000 servers. When a show like *Stranger Things* drops, they pre-warm the cache with predicted content keys hours before release. Result: 99.99% cache hit rate. Ten million people hit play, and the database barely notices.
 
-If Netflix didn't cache, every single one of those ten million requests would hit their database directly. At 99.99% cache hit rate, only about 1,000 requests per second reach the database. Without cache, that number becomes 170,000. Their database cluster would need to be 170x larger just to survive a premiere. Instead, the cache absorbs the load, the stream starts instantly, and Netflix saves millions in infrastructure costs. This is why we cache.
+If Netflix didn't cache, every single one of those ten million requests would hit their database directly. At 99.99% cache hit rate, only about 1,000 requests per second reach the database. Without cache, that number becomes 170,000.
+
+Why does this matter? A cache read takes about 0.5ms—it's just a key-value lookup in memory. A database read takes 5-50ms because it has to parse your query, check permissions, possibly hit disk, and maintain ACID guarantees. That's 10-100x slower per request. Worse, databases are expensive to scale: they need replicas, consensus protocols, and persistent storage. A cache node is just RAM and a network card. Netflix's 22,000 cache servers cost a fraction of what 22,000 database nodes would cost—and they couldn't even build a database cluster that large if they tried.
+
+Instead, the cache absorbs the load, the stream starts instantly, and Netflix saves millions in infrastructure costs. This is why we cache.
 
 ## Cache meltdown
 
