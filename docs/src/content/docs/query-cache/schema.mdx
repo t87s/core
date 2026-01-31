@@ -1,0 +1,93 @@
+---
+title: Schema
+description: Teaching the cache about your data
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The schema is how you tell QueryCache what your tag hierarchy looks like. It's not strictly required—you can always drop down to [primitives](/primitives/) and manage tags manually—but it buys you two nice things: type-safe tag builders and automatic key derivation.
+
+If you've ever fat-fingered a cache key and spent an hour wondering why your data was stale, you'll appreciate having the compiler catch that instead.
+
+## Wild vs. static
+
+Tags have two kinds of segments: **wild** (dynamic IDs that change per entity) and **static** (fixed strings that are the same for everyone).
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
+
+    const schema = at('users', () =>
+      wild
+        .at('settings')  // static: all users share the same 'settings' concept
+        .at('posts', () => wild.at('comments', () => wild))  // wild: each post has its own ID
+    );
+
+    const cache = QueryCache({
+      schema,
+      adapter: new MemoryAdapter(),
+      queries: () => ({}),
+    });
+
+    // These all work:
+    cache.tags.users('123');                           // ['users', '123']
+    cache.tags.users.settings;                         // ['users', 'settings']
+    cache.tags.users('123').posts('p1');               // ['users', '123', 'posts', 'p1']
+    cache.tags.users('123').posts('p1').comments('c9'); // ['users', '123', 'posts', 'p1', 'comments', 'c9']
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from t87s import QueryCache, TagSchema, Wild, Static
+    from t87s.adapters import AsyncMemoryAdapter
+
+    class Tags(TagSchema):
+        users: Wild["Users"]
+
+    class Users(TagSchema):
+        settings: Static  # static: all users share the same 'settings' concept
+        posts: Wild["Posts"]  # wild: each post has its own ID
+
+    class Posts(TagSchema):
+        comments: Wild[TagSchema]
+
+    class Cache(QueryCache[Tags]):
+        pass
+
+    cache = Cache(adapter=AsyncMemoryAdapter())
+
+    # These all work:
+    cache.t.users("123")                              # ('users', '123')
+    cache.t.users.settings                            # ('users', 'settings')
+    cache.t.users("123").posts("p1")                  # ('users', '123', 'posts', 'p1')
+    cache.t.users("123").posts("p1").comments("c9")   # ('users', '123', 'posts', 'p1', 'comments', 'c9')
+    ```
+  </TabItem>
+</Tabs>
+
+The difference matters for invalidation. If you invalidate `users.settings`, you're invalidating a single cache entry that all users might share (like global settings). If you invalidate `users('123')`, you're invalidating everything under that specific user—their posts, comments, profile, the works.
+
+## Why bother?
+
+You might be wondering: why define a schema at all? Can't I just use string tags directly?
+
+You can! That's what primitives are for. But the schema gives you:
+
+**Autocomplete.** Your editor knows exactly which tag paths are valid. No more typos, no more guessing.
+
+**Type errors.** If you try to use `cache.tags.users('123').widgets`, TypeScript will yell at you (politely, in red squiggles). This is good, because `widgets` doesn't exist in your schema, and you probably meant `posts`.
+
+**Structural documentation.** The schema is a living document of how your data is organized. Six months from now, when you've forgotten everything, you can look at the schema and remember.
+
+## Designing your schema
+
+There's no single right way to structure a schema. Here are some guidelines:
+
+**Match your domain.** If users have orders, and orders have line items, your schema should reflect that nesting. Don't try to be clever.
+
+**Think about invalidation patterns.** When a user changes their profile, what else should go stale? Their posts? Their comments? Their settings? The answer determines how you nest things.
+
+**Start simple.** You can always add more nesting later. It's harder to remove it. If you're not sure, start flat and see what invalidation patterns emerge in practice.
+
+I wish I could give you a formula, but this is one of those things you learn by doing. The good news is that refactoring a schema isn't that painful—you just change the type and fix the red squiggles until they go away.

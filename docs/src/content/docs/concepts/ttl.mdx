@@ -10,22 +10,35 @@ TTL stands for "Time To Live", which sounds like a medical prognosis but is actu
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
-    const getUser = t87s.query((id: string) => ({
-      tags: [tags.user(id)],
-      ttl: '10m', // Cache this for 10 minutes
-      fn: () => db.users.findById(id),
-    }));
+    import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
+
+    const cache = QueryCache({
+      schema: at('users', () => wild),
+      adapter: new MemoryAdapter(),
+      queries: (tags) => ({
+        getUser: (id: string) => ({
+          tags: [tags.users(id)],
+          ttl: '10m', // Cache this for 10 minutes
+          fn: () => db.users.findById(id),
+        }),
+      }),
+    });
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    @t87s.query
-    def get_user(id: str) -> QueryConfig[User]:
-        return QueryConfig(
-            tags=[tags["user"](id)],
-            ttl="10m",  # Cache this for 10 minutes
-            fn=lambda: db.users.find_by_id(id),
-        )
+    from t87s import QueryCache, TagSchema, Wild, cached
+    from t87s.adapters import AsyncMemoryAdapter
+
+    class Tags(TagSchema):
+        users: Wild[TagSchema]
+
+    class Cache(QueryCache[Tags]):
+        @cached(Tags.users(), ttl="10m")  # Cache this for 10 minutes
+        async def get_user(self, id: str):
+            return await db.users.find_by_id(id)
+
+    cache = Cache(adapter=AsyncMemoryAdapter())
     ```
   </TabItem>
 </Tabs>

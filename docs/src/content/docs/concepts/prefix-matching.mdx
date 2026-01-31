@@ -14,30 +14,70 @@ Tags work the same way. When you invalidate a tag, all "child" tags are also inv
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
-    const tags = defineTags({
-      user: (id: string) => ['user', id],
-      userPosts: (id: string) => ['user', id, 'posts'],
-      userSettings: (id: string) => ['user', id, 'settings'],
+    import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
+
+    const schema = at('users', () =>
+      wild.at('posts').at('settings')
+    );
+
+    const cache = QueryCache({
+      schema,
+      adapter: new MemoryAdapter(),
+      queries: (tags) => ({
+        getUser: (id: string) => ({
+          tags: [tags.users(id)],
+          fn: () => db.users.findById(id),
+        }),
+        getUserPosts: (id: string) => ({
+          tags: [tags.users(id).posts],
+          fn: () => db.posts.findByUserId(id),
+        }),
+        getUserSettings: (id: string) => ({
+          tags: [tags.users(id).settings],
+          fn: () => db.settings.findByUserId(id),
+        }),
+      }),
     });
 
-    // Invalidating tags.user('123') also invalidates:
-    // - ['user', '123']           ← exact match
-    // - ['user', '123', 'posts']  ← prefix match
-    // - ['user', '123', 'settings'] ← prefix match
+    // Invalidating cache.tags.users('123') also invalidates:
+    // - ['users', '123']           ← exact match
+    // - ['users', '123', 'posts']  ← prefix match
+    // - ['users', '123', 'settings'] ← prefix match
+    await cache.invalidate(cache.tags.users('123'));
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    tags = define_tags({
-        "user": lambda id: ("user", id),
-        "user_posts": lambda id: ("user", id, "posts"),
-        "user_settings": lambda id: ("user", id, "settings"),
-    })
+    from t87s import QueryCache, TagSchema, Wild, Static, cached
+    from t87s.adapters import AsyncMemoryAdapter
 
-    # Invalidating tags["user"]("123") also invalidates:
-    # - ("user", "123")             ← exact match
-    # - ("user", "123", "posts")    ← prefix match
-    # - ("user", "123", "settings") ← prefix match
+    class Tags(TagSchema):
+        users: Wild["Users"]
+
+    class Users(TagSchema):
+        posts: Static
+        settings: Static
+
+    class Cache(QueryCache[Tags]):
+        @cached(Tags.users())
+        async def get_user(self, id: str):
+            return await db.users.find_by_id(id)
+
+        @cached(Tags.users().posts)
+        async def get_user_posts(self, id: str):
+            return await db.posts.find_by_user_id(id)
+
+        @cached(Tags.users().settings)
+        async def get_user_settings(self, id: str):
+            return await db.settings.find_by_user_id(id)
+
+    cache = Cache(adapter=AsyncMemoryAdapter())
+
+    # Invalidating cache.t.users("123") also invalidates:
+    # - ("users", "123")             ← exact match
+    # - ("users", "123", "posts")    ← prefix match
+    # - ("users", "123", "settings") ← prefix match
+    await cache.invalidate(cache.t.users("123"))
     ```
   </TabItem>
 </Tabs>
@@ -49,19 +89,14 @@ If you only want to invalidate the exact tag:
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
-    return {
-      invalidates: [tags.user(id)],
-      exact: true, // Only invalidates ['user', '123'], not children
-    };
+    // Only invalidates ['users', '123'], not children
+    await cache.invalidate(cache.tags.users('123'), { exact: true });
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    return MutationResult(
-        result=user,
-        invalidates=[tags["user"](id)],
-        exact=True,  # Only invalidates ("user", "123"), not children
-    )
+    # Only invalidates ("users", "123"), not children
+    await cache.invalidate(cache.t.users("123"), exact=True)
     ```
   </TabItem>
 </Tabs>
