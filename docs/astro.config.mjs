@@ -15,17 +15,6 @@ export default defineConfig({
       sidebar: [
         { label: 'Getting Started', slug: 'getting-started' },
         {
-          label: 'Concepts',
-          items: [
-            { label: 'Cache', slug: 'concepts/cache' },
-            { label: 'Prefix Matching', slug: 'concepts/prefix-matching' },
-            { label: 'TTL', slug: 'concepts/ttl' },
-            { label: 'Grace Periods', slug: 'concepts/grace-periods' },
-            { label: 'Adapters', slug: 'concepts/adapters' },
-          ],
-        },
-        { label: 'Primitives', slug: 'primitives' },
-        {
           label: 'QueryCache',
           items: [
             { label: 'Schema', slug: 'query-cache/schema' },
@@ -34,6 +23,17 @@ export default defineConfig({
             { label: 'Tutorial', slug: 'query-cache/tutorial' },
           ],
         },
+        {
+          label: 'Concepts',
+          items: [
+            { label: 'Cache', slug: 'concepts/cache' },
+            { label: 'TTL', slug: 'concepts/ttl' },
+            { label: 'Grace Periods', slug: 'concepts/grace-periods' },
+            { label: 'Prefix Matching', slug: 'concepts/prefix-matching' },
+            { label: 'Adapters', slug: 'concepts/adapters' },
+          ],
+        },
+        { label: 'Primitives', slug: 'primitives' },
         { label: 't87s Cloud', slug: 'cloud' },
       ],
     }),
