@@ -73,7 +73,7 @@ The alternative is using [primitives](/primitives/) directly, which is more flex
 
 One thing you might notice: you never specify a cache key. That's because QueryCache derives it automatically from the method name and arguments.
 
-When you call `cache.getUser('123')`, the cache key becomes something like `getUser:["123"]`. When you call `cache.getUserWithPosts('456')`, the key becomes `getUserWithPosts:["456"]`. You don't have to think about it, and you definitely don't have to hand-roll key strings and hope you spelled them consistently.
+The format is `methodName:JSON.stringify(args)`. So `cache.getUser('123')` becomes `getUser:["123"]`. A multi-argument call like `cache.getPost('user1', 'post1')` becomes `getPost:["user1","post1"]`. You don't have to think about it, and you definitely don't have to hand-roll key strings and hope you spelled them consistently.
 
 This is the main quality-of-life improvement over primitives. No more `cache.get(\`user:\${id}\`)` scattered across your codebase, no more wondering if you used `user:` or `users:` or `user_` as your prefix.
 
