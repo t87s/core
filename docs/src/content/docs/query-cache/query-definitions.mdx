@@ -1,11 +1,15 @@
 ---
 title: Query Definitions
-description: Declare once, call forever
+description: The nice way to define cached queries
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Query definitions turn into methods. The cache key is derived from the method name plus its args, so you never have to hand-roll keys unless you want to.
+Query definitions are how you tell QueryCache what data you want to cache and how it relates to your tags. You define them once, and then you get nice methods on your cache instance that handle all the caching machinery for you.
+
+The alternative is using [primitives](/primitives/) directly, which is more flexible but also more verbose. For most use cases, query definitions are the way to go.
+
+## Defining queries
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -17,16 +21,22 @@ Query definitions turn into methods. The cache key is derived from the method na
       adapter: new MemoryAdapter(),
       defaultTtl: '1m',
       defaultGrace: '5m',
-      verifyPercent: 0.1,
       queries: (tags) => ({
         getUser: (id: string) => ({
           tags: [tags.users(id)],
           fn: () => db.users.findById(id),
         }),
+        getUserWithPosts: (id: string) => ({
+          tags: [tags.users(id)],
+          ttl: '30s',  // override the default for this query
+          fn: () => db.users.findByIdWithPosts(id),
+        }),
       }),
     });
 
+    // Now you have nice methods:
     await cache.getUser('123');
+    await cache.getUserWithPosts('123');
     ```
   </TabItem>
   <TabItem label="Python">
@@ -42,16 +52,53 @@ Query definitions turn into methods. The cache key is derived from the method na
         async def get_user(self, id: str):
             return await db.users.find_by_id(id)
 
+        @cached(Tags.users(), ttl="30s")  # override the default
+        async def get_user_with_posts(self, id: str):
+            return await db.users.find_by_id_with_posts(id)
+
     cache = Cache(
         adapter=AsyncMemoryAdapter(),
         default_ttl="1m",
         default_grace="5m",
-        verify_percent=0.1,
     )
 
+    # Now you have nice methods:
     await cache.get_user("123")
+    await cache.get_user_with_posts("123")
     ```
   </TabItem>
 </Tabs>
 
-You can still drop to primitives when you need custom keys or a one-off cache path. QueryCache keeps the happy path short.
+## How keys are derived
+
+One thing you might notice: you never specify a cache key. That's because QueryCache derives it automatically from the method name and arguments.
+
+The format is `methodName:JSON.stringify(args)`. So `cache.getUser('123')` becomes `getUser:["123"]`. A multi-argument call like `cache.getPost('user1', 'post1')` becomes `getPost:["user1","post1"]`. You don't have to think about it, and you definitely don't have to hand-roll key strings and hope you spelled them consistently.
+
+This is the main quality-of-life improvement over primitives. No more `cache.get(\`user:\${id}\`)` scattered across your codebase, no more wondering if you used `user:` or `users:` or `user_` as your prefix.
+
+If you do need custom keys—maybe for debugging, or to match an existing cache scheme—that's what primitives are for. But for new code, the derived keys are almost always fine.
+
+## Configuration options
+
+You can set defaults at the cache level and override them per-query:
+
+| Option | What it does |
+|--------|--------------|
+| `defaultTtl` | How long entries stay fresh before expiring |
+| `defaultGrace` | How long to serve stale data if refresh fails |
+| `verifyPercent` | What percentage of requests should verify freshness (for t87s Cloud) |
+
+Individual queries can override `ttl` and `grace` when they need different behavior. A dashboard query might want a 10-second TTL, while a user profile might be fine with 5 minutes.
+
+## The function that fetches
+
+The `fn` in each query definition is the actual data-fetching function. It only runs on cache misses—when there's no cached value, or when the cached value has expired.
+
+A few things to keep in mind:
+
+**Keep it pure-ish.** The function should fetch data, not mutate it. Side effects in a cache-miss handler are a recipe for confusion.
+
+**Throw on errors.** If the fetch fails, let it throw. t87s will catch the error and, if there's a stale value within the grace period, serve that instead. If there's no grace fallback, the error propagates to the caller.
+
+**Keep it reasonably fast.** The whole point of caching is to avoid slow operations. If your `fn` is slow, that's fine—that's why you're caching it. But if it's slow *and* called frequently *and* you have a short TTL, you might want to rethink your configuration.

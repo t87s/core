@@ -1,11 +1,15 @@
 ---
 title: Primitives
-description: The raw tools, the sharp edges
+description: For when you want to drive stick
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Primitives are the axioms. Use them when you want full control over keys, tags, and when things are allowed to go stale.
+If [QueryCache](/query-cache/tutorial/) is an automatic transmission, primitives are a manual. You get direct control over cache keys, tags, TTLs, and the whole machinery. Most people don't need this—QueryCache handles the common cases beautifully—but sometimes you want to cache something weird, or you're integrating with existing code that already has its own key scheme, or you just really like knowing exactly what's happening under the hood.
+
+No judgment here. Some of us still use vim.
+
+## The basics
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -18,19 +22,26 @@ Primitives are the axioms. Use them when you want full control over keys, tags, 
       defaultGrace: '2m',
     });
 
+    // Query: fetch if not cached, cache the result
     await p.query({
       key: 'users:123',
       tags: [['users', '123']],
       fn: () => db.users.findById('123'),
     });
 
+    // Set: manually cache a value
     await p.set('users:settings', settings, {
       tags: [['users', 'settings']],
       ttl: '10m',
     });
 
+    // Get: read without recomputing
     const user = await p.get('users:123');
+
+    // Invalidate: mark tags as stale
     await p.invalidate([['users', '123']]);
+
+    // Delete: remove from cache entirely
     await p.del('users:settings');
     ```
   </TabItem>
@@ -45,12 +56,14 @@ Primitives are the axioms. Use them when you want full control over keys, tags, 
         default_grace="2m",
     )
 
+    # Query: fetch if not cached, cache the result
     await p.query(
         key="users:123",
         tags=[("users", "123")],
         fn=lambda: db.users.find_by_id("123"),
     )
 
+    # Set: manually cache a value
     await p.set(
         "users:settings",
         settings,
@@ -58,11 +71,32 @@ Primitives are the axioms. Use them when you want full control over keys, tags, 
         ttl="10m",
     )
 
+    # Get: read without recomputing
     user = await p.get("users:123")
+
+    # Invalidate: mark tags as stale
     await p.invalidate([("users", "123")])
+
+    # Delete: remove from cache entirely
     await p.delete("users:settings")
     ```
   </TabItem>
 </Tabs>
 
-Tags do the real work. You can have wild and static at the same level, like users:123 and users:settings, and invalidating users:123 will never touch settings.
+## When to use primitives
+
+**You want custom cache keys.** QueryCache derives keys from method names and arguments, which is convenient until you need a specific key format for debugging or migration purposes.
+
+**You're caching ad-hoc data.** Maybe you computed an expensive aggregate and want to stash it without defining a whole query for it. `p.set()` is your friend.
+
+**You're mixing with existing infrastructure.** If you already have cache keys from another system, primitives let you keep using them while still benefiting from t87s's tag-based invalidation.
+
+**You enjoy the suffering.** Look, I'm not going to pretend that manually managing cache keys is fun. But some of us find a certain satisfaction in it, like people who sharpen their own knives or build their own keyboards. You know who you are.
+
+## Tags are still the point
+
+Even when using primitives, tags are what make invalidation work. The key is just an address—the tag is what tells t87s which entries are related to each other.
+
+When you call `p.invalidate([['users', '123']])`, every cache entry tagged with `['users', '123']` (or any prefix of it) gets marked stale. That's the whole trick: you don't have to remember every cache key you've ever used. You just invalidate the tag that describes what changed, and t87s figures out the rest.
+
+If you find yourself invalidating by key instead of by tag, you might be missing the point. Not that I've ever done that myself. More than twice.

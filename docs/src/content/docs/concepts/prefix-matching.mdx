@@ -1,18 +1,24 @@
 ---
 title: Prefix Matching
-description: Parents take the fall so children can be fast
+description: Hierarchical cache invalidation with prefix matching
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-When you invalidate a tag, everything below it goes stale too. It's family drama, but useful.
+In many great literary works (the House of Atreus, One Hundred Years of Solitude, the Old Testament), a curse is placed not only on the protagonist, but also on their progeny. That's friggin' awesome.
+
+Tags work the same way. When you invalidate a tag, all "child" tags are also invalidated.
+
+## How It Works
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
     import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
 
-    const schema = at('users', () => wild.at('posts', () => wild));
+    const schema = at('users', () =>
+      wild.at('posts').at('settings')
+    );
 
     const cache = QueryCache({
       schema,
@@ -22,43 +28,75 @@ When you invalidate a tag, everything below it goes stale too. It's family drama
           tags: [tags.users(id)],
           fn: () => db.users.findById(id),
         }),
-        getPost: (userId: string, postId: string) => ({
-          tags: [tags.users(userId).posts(postId)],
-          fn: () => db.posts.findById(postId),
+        getUserPosts: (id: string) => ({
+          tags: [tags.users(id).posts],
+          fn: () => db.posts.findByUserId(id),
+        }),
+        getUserSettings: (id: string) => ({
+          tags: [tags.users(id).settings],
+          fn: () => db.settings.findByUserId(id),
         }),
       }),
     });
 
+    // Invalidating cache.tags.users('123') also invalidates:
+    // - ['users', '123']           ← exact match
+    // - ['users', '123', 'posts']  ← prefix match
+    // - ['users', '123', 'settings'] ← prefix match
     await cache.invalidate(cache.tags.users('123'));
-    // Invalidates users:123 and users:123:posts:*
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    from t87s import QueryCache, TagSchema, Wild, cached
+    from t87s import QueryCache, TagSchema, Wild, Static, cached
     from t87s.adapters import AsyncMemoryAdapter
 
     class Tags(TagSchema):
         users: Wild["Users"]
 
     class Users(TagSchema):
-        posts: Wild[TagSchema]
+        posts: Static
+        settings: Static
 
     class Cache(QueryCache[Tags]):
         @cached(Tags.users())
         async def get_user(self, id: str):
             return await db.users.find_by_id(id)
 
-        @cached(Tags.users().posts())
-        async def get_post(self, user_id: str, post_id: str):
-            return await db.posts.find_by_id(post_id)
+        @cached(Tags.users().posts)
+        async def get_user_posts(self, id: str):
+            return await db.posts.find_by_user_id(id)
+
+        @cached(Tags.users().settings)
+        async def get_user_settings(self, id: str):
+            return await db.settings.find_by_user_id(id)
 
     cache = Cache(adapter=AsyncMemoryAdapter())
 
+    # Invalidating cache.t.users("123") also invalidates:
+    # - ("users", "123")             ← exact match
+    # - ("users", "123", "posts")    ← prefix match
+    # - ("users", "123", "settings") ← prefix match
     await cache.invalidate(cache.t.users("123"))
-    # Invalidates users:123 and users:123:posts:*
     ```
   </TabItem>
 </Tabs>
 
-If you really want only the exact tag, TypeScript lets you do `cache.invalidate(tag, true)` or drop to primitives. Python will follow soon.
+## Exact Mode
+
+If you only want to invalidate the exact tag:
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    // Only invalidates ['users', '123'], not children
+    await cache.invalidate(cache.tags.users('123'), { exact: true });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    # Only invalidates ("users", "123"), not children
+    await cache.invalidate(cache.t.users("123"), exact=True)
+    ```
+  </TabItem>
+</Tabs>

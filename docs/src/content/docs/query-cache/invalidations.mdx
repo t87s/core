@@ -1,26 +1,78 @@
 ---
 title: Invalidations
-description: Tell the cache what just changed
+description: How to tell the cache that something changed
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Invalidations are the promise you keep. You changed the data, so you say so, and everything depending on it stops pretending it's fresh.
+Invalidation is the hard part of caching that people actually mess up. Except you, because you're reading these docs. It's easy to stash data away, but it's hard to know when the data is no-longer valid. There's no silver bullet, but t87s tries to remove as many footguns as possible. And if you use the [cloud adapter](/cloud/), the adaptive intelligence makes it such that you can turn your brain off (except that part that pays the t87s cloud bill) and let your LLM do the heavy lifting.
+
+## Basic invalidation
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
+    // Invalidate one user
     await cache.invalidate(cache.tags.users('123'));
+
+    // Invalidate ALL users (nuclear option)
     await cache.invalidate(cache.tags.users);
-    await cache.invalidate(cache.tags.users('123'), true);
+
+    // Invalidate a specific post
+    await cache.invalidate(cache.tags.users('123').posts('p1'));
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
+    # Invalidate one user
     await cache.invalidate(cache.t.users("123"))
+
+    # Invalidate ALL users (nuclear option)
     await cache.invalidate(cache.t.users)
+
+    # Invalidate a specific post
+    await cache.invalidate(cache.t.users("123").posts("p1"))
     ```
   </TabItem>
 </Tabs>
 
-The first line invalidates one user. The second invalidates all users. The third is exact invalidation, which TypeScript supports directly or via primitives. Python will catch up.
+When you invalidate a tag, everything *under* that tag goes stale too. Invalidating `users('123')` also invalidates `users('123').posts('p1')` and `users('123').posts('p1').comments('c9')` and so on. This is called prefix matching, and it's almost always what you want.
+
+If you're updating a user, you probably want their cached posts and comments to refresh too—they might depend on the user's name or avatar or some other field that just changed. Prefix matching handles this automatically.
+
+## Exact invalidation
+
+Sometimes you *don't* want the cascade. Maybe you updated a user's email but their posts and comments are genuinely unaffected. In that case, you can do an exact invalidation:
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    // Only invalidate users:123, NOT users:123:posts:*
+    await cache.invalidate(cache.tags.users('123'), true);
+
+    // Or via primitives:
+    await cache.primitives.invalidate([['users', '123']], { exact: true });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    # Python support for exact invalidation is coming soon.
+    # For now, use prefix invalidation, which is the safer default anyway.
+    await cache.invalidate(cache.t.users("123"))
+    ```
+  </TabItem>
+</Tabs>
+
+Be careful with exact invalidation. It's an optimization, and like most optimizations, it can bite you if you're wrong about what's affected. When in doubt, let the prefix cascade happen.
+
+## When to invalidate
+
+The obvious answer is "when the data changes." But *where* you put that invalidation call matters.
+
+**After writes, not before.** You want to invalidate after the database write succeeds, not before. If you invalidate first and then the write fails, you've just cleared good data for no reason.
+
+**Close to the mutation.** Put your invalidation calls near the code that mutates the data. If `updateUser()` changes the database, it should also invalidate the cache. Don't scatter invalidations across unrelated files where you'll forget about them.
+
+**Consider side effects.** Sometimes updating one thing affects another. If updating a user's name should also invalidate their comments (because comments display the author name), make sure that invalidation happens. This is the part people forget.
+
+I'm not going to insult your intelligence with even more AI-generated bullet points than the three you read above (jk, AI didn't generate them—it generated this paragraph though... joke's on you...). But hopefully you get the point—this is the hard part of caching. And the whole reason t87s was built is not because a lib magically fixes it, but because LLMs are so powerful that, fed the right data, they can [correct a cache based on historical data in near real-time](/cloud/#using-with-llms).

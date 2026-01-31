@@ -1,12 +1,22 @@
 ---
 title: Cache
-description: Why caching is the only cheat code that actually works
+description: The $440 million lesson you'd rather learn from someone else
 ---
 
-Caching is how grown-up systems stay fast without lying. The trick is simple: you keep the expensive work close by, so the next request is a short walk instead of a cross-country flight.
+Netflix serves 260 million subscribers across 190 countries. Their EVCache system handles 400 million operations per second across 22,000 servers. When a show like *Stranger Things* drops, they pre-warm the cache with predicted content keys hours before release. Result: 99.99% cache hit rate. Ten million people hit play, and the database barely notices.
 
-Every serious company does this. The feed that loads instantly? Cached. The dashboard that doesn't spin forever? Cached. The "Continue Watching" row that appears before your coffee cools? Cached. Nobody recomputes that from scratch, because users don't wait and databases don't stretch.
+If Netflix didn't cache, every single one of those ten million requests would hit their database directly. At 99.99% cache hit rate, only about 1,000 requests per second reach the database. Without cache, that number becomes 170,000.
 
-Caching isn't about being clever. It's about being honest. You trade a little staleness for a lot of speed, then you put guardrails around what "stale" even means. That's the whole game.
+Why does this matter? A cache read takes about 0.5ms—it's just a key-value lookup in memory. A database read takes 5-50ms because it has to parse your query, check permissions, possibly hit disk, and maintain ACID guarantees. That's 10-100x slower per request. Worse, databases are expensive to scale: they need replicas, consensus protocols, and persistent storage. A cache node is just RAM and a network card. Netflix's 22,000 cache servers cost a fraction of what 22,000 database nodes would cost—and they couldn't even build a database cluster that large if they tried.
 
-t87s exists to make that trade explicit. You declare what's allowed to go stale, you invalidate what must not, and you stop guessing.
+Instead, the cache absorbs the load, the stream starts instantly, and Netflix saves millions in infrastructure costs. This is why we cache.
+
+## Cache meltdown
+
+In 2010, Facebook went dark for hours. Unfortunately, it came back, but it was a hopeful moment for many of us. The cause? A cache invalidation bug. Their automated system tried to fix an invalid config value in cache, but the fix required a database query. Every client saw the bad value simultaneously. Every client tried to fix it simultaneously. Hundreds of thousands of queries per second hammered the database cluster until it collapsed. Facebook had to turn off the entire site to recover.
+
+This is what happens when caching goes wrong.
+
+## To cache or not to cache?
+
+Premature optimization is the root of all evil. So never start a project out with cache in mind. But at a certain point, things will just feel slow. Caching is the best optimization, and it's also the hardest. It's the best because the easiest way to optimize any program is not to run it. And it's the hardest because it's really tough to know when things change and when things stay the same. But they stay the same more than you'd think, and when this is the case, you're leaving oodles of speed on the table by not caching. So cache with reckless abandon. Your users will be happy, your cloud bill will be less, and yours truly will feel like he didn't waste time writing the paragraph you're reading.
