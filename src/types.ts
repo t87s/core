@@ -1,6 +1,3 @@
-import type { Tag } from './tags.js';
-import type { Duration } from './duration.js';
-
 /**
  * A cached entry stored by adapters.
  */
@@ -32,37 +29,5 @@ export interface StorageAdapter {
   ): Promise<void>;
 }
 
-/**
- * Options for T87s client initialization.
- */
-export interface T87sOptions {
-  adapter: StorageAdapter;
-  prefix?: string;
-  defaultTtl?: Duration;
-  defaultGrace?: Duration | false;
-  /** Sampling rate for staleness verification (0.0-1.0). Default 0 (disabled). Only used with CloudAdapter. */
-  verifyPercent?: number;
-}
-
-/**
- * Configuration returned from a query factory.
- */
-export interface QueryConfig<T> {
-  tags: Tag[];
-  fn: () => Promise<T>;
-  ttl?: Duration;
-  grace?: Duration | false;
-}
-
-/**
- * Result returned from a mutation function.
- */
-export interface MutationResult<T> {
-  result: T;
-  invalidates: Tag[];
-  exact?: boolean;
-}
-
 // Re-export for convenience
-export type { Tag } from './tags.js';
 export type { Duration } from './duration.js';

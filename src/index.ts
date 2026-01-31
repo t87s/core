@@ -1,10 +1,33 @@
-// Core client
-export { T87s } from './client.js';
+// src/index.ts
 
-// Tags
-export { defineTags, isTagPrefix, serializeTag, deserializeTag } from './tags.js';
+// =============================================================================
+// QueryCache (new API)
+// =============================================================================
+export { QueryCache, type QueryCacheOptions, type QueryCacheClient } from './query-cache.js';
+export {
+  at,
+  wild,
+  type AtBuilder,
+  type WildBuilder,
+  type AtNode,
+  type WildNode,
+} from './schema.js';
+export type { TypedTag, TypedQueryDef, SchemaToTags } from './query-cache-types.js';
 
+// =============================================================================
+// Primitives (escape hatch)
+// =============================================================================
+export {
+  createPrimitives,
+  type Primitives,
+  type PrimitivesOptions,
+  type SetOptions,
+  type QueryOptions as PrimitivesQueryOptions,
+} from './primitives.js';
+
+// =============================================================================
 // Adapters
+// =============================================================================
 export {
   MemoryAdapter,
   type MemoryAdapterOptions,
@@ -16,16 +39,12 @@ export {
   type CloudAdapterOptions,
 } from './adapters/index.js';
 
+// =============================================================================
 // Types
-export type {
-  Tag,
-  CacheEntry,
-  T87sOptions,
-  Duration,
-  QueryConfig,
-  MutationResult,
-  StorageAdapter,
-} from './types.js';
+// =============================================================================
+export type { CacheEntry, Duration, StorageAdapter } from './types.js';
 
+// =============================================================================
 // Utilities
+// =============================================================================
 export { parseDuration } from './duration.js';
