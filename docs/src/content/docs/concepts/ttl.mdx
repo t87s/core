@@ -1,54 +1,65 @@
 ---
 title: TTL
-description: How long your cache stays fresh
+description: How long your cache gets to be right
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-TTL stands for "Time To Live", which sounds like a medical prognosis but is actually just how long your cached data stays fresh before it expires.
+TTL is Time To Live. It's how long a cache entry stays fresh before it expires and has to be recomputed.
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
-    const getUser = t87s.query((id: string) => ({
-      tags: [tags.user(id)],
-      ttl: '10m', // Cache this for 10 minutes
-      fn: () => db.users.findById(id),
-    }));
+    import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
+
+    const schema = at('users', () => wild);
+    const adapter = new MemoryAdapter();
+
+    const cache = QueryCache({
+      schema,
+      adapter,
+      defaultTtl: '10m',
+      queries: (tags) => ({
+        getUser: (id: string) => ({
+          tags: [tags.users(id)],
+          ttl: '2m',
+          fn: () => db.users.findById(id),
+        }),
+      }),
+    });
+
+    await cache.primitives.set('users:settings', settings, {
+      tags: [['users', 'settings']],
+      ttl: '1h',
+    });
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    @t87s.query
-    def get_user(id: str) -> QueryConfig[User]:
-        return QueryConfig(
-            tags=[tags["user"](id)],
-            ttl="10m",  # Cache this for 10 minutes
-            fn=lambda: db.users.find_by_id(id),
-        )
+    from t87s import QueryCache, TagSchema, Wild
+    from t87s.adapters import AsyncMemoryAdapter
+
+    class Tags(TagSchema):
+        users: Wild[TagSchema]
+
+    class Cache(QueryCache[Tags]):
+        pass
+
+    cache = Cache(
+        adapter=AsyncMemoryAdapter(),
+        default_ttl="10m",
+    )
+
+    await cache.primitives.set(
+        "users:settings",
+        settings,
+        tags=[("users", "settings")],
+        ttl="1h",
+    )
     ```
   </TabItem>
 </Tabs>
 
-## Human-friendly durations
+We accept human strings like "30s", "5m", "2h", and "1d", plus raw milliseconds if you enjoy typing zeros.
 
-Nobody wants to do math. We support strings like:
-
-- `'30s'` - 30 seconds
-- `'5m'` - 5 minutes
-- `'2h'` - 2 hours
-- `'1d'` - 1 day
-
-Or if you like mashing the 0 key, milliseconds work too: `ttl: 600000`.
-
-## Choosing a TTL
-
-There's no magic number. Short TTLs work well for real-time dashboards or user sessions, whereas longer ones make sense for static content or configuration data that rarely changes.
-
-Tuning your TTL is more of an art than a science. And, like all great art, it is a completely mercantile and transactional endeavor. Not unlike our [SaaS offering](/cloud/), which auto-tunes your TTL (amongst other things) so that your cache purrs like a Formula 1 engine.
-
-## TTL vs Invalidation
-
-In a perfect world, you'd invalidate exactly when data changes and never need TTL at all. But we don't live in a perfect world. Well, actually, I do, but you don't. You or someone on your team will invariably forget to invalidate the cache.
-
-TTL is your safety net. Even if everything else goes belly up, your cache won't serve stale data forever.
+Short TTLs fit dashboards and sessions. Long TTLs fit config and content that sleeps more than it moves. If you forget to invalidate, TTL is the safety net that keeps your cache from lying forever.

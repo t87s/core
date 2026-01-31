@@ -1,0 +1,61 @@
+---
+title: Schema
+description: Your tag map, without the cartography degree
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Schema is how QueryCache learns your tag shape. It lets you mix static and wild segments at the same level so your tags read like your domain.
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
+
+    const schema = at('users', () =>
+      wild
+        .at('settings')
+        .at('posts', () => wild.at('comments', () => wild))
+    );
+
+    const cache = QueryCache({
+      schema,
+      adapter: new MemoryAdapter(),
+      queries: () => ({}),
+    });
+
+    cache.tags.users('123');
+    cache.tags.users.settings;
+    cache.tags.users('123').posts('p1');
+    cache.tags.users('123').posts('p1').comments('c9');
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from t87s import QueryCache, TagSchema, Wild, Static
+    from t87s.adapters import AsyncMemoryAdapter
+
+    class Tags(TagSchema):
+        users: Wild["Users"]
+
+    class Users(TagSchema):
+        settings: Static
+        posts: Wild["Posts"]
+
+    class Posts(TagSchema):
+        comments: Wild[TagSchema]
+
+    class Cache(QueryCache[Tags]):
+        pass
+
+    cache = Cache(adapter=AsyncMemoryAdapter())
+
+    cache.t.users("123")
+    cache.t.users.settings
+    cache.t.users("123").posts("p1")
+    cache.t.users("123").posts("p1").comments("c9")
+    ```
+  </TabItem>
+</Tabs>
+
+If it reads like your app, you're doing it right.

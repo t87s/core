@@ -1,18 +1,20 @@
 ---
-title: Prefix Matching
-description: Parents take the fall so children can be fast
+title: Tutorial
+description: A full flow, end to end
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-When you invalidate a tag, everything below it goes stale too. It's family drama, but useful.
+A tiny app with users, posts, and comments. Enough to show the shape without making you regret reading docs.
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
     import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
 
-    const schema = at('users', () => wild.at('posts', () => wild));
+    const schema = at('users', () =>
+      wild.at('posts', () => wild.at('comments', () => wild))
+    );
 
     const cache = QueryCache({
       schema,
@@ -29,8 +31,14 @@ When you invalidate a tag, everything below it goes stale too. It's family drama
       }),
     });
 
+    await cache.getUser('123');
+    await cache.getPost('123', 'p1');
     await cache.invalidate(cache.tags.users('123'));
-    // Invalidates users:123 and users:123:posts:*
+
+    await cache.primitives.set('stats:users', stats, {
+      tags: [['users']],
+      ttl: '5m',
+    });
     ```
   </TabItem>
   <TabItem label="Python">
@@ -42,7 +50,10 @@ When you invalidate a tag, everything below it goes stale too. It's family drama
         users: Wild["Users"]
 
     class Users(TagSchema):
-        posts: Wild[TagSchema]
+        posts: Wild["Posts"]
+
+    class Posts(TagSchema):
+        comments: Wild[TagSchema]
 
     class Cache(QueryCache[Tags]):
         @cached(Tags.users())
@@ -55,10 +66,18 @@ When you invalidate a tag, everything below it goes stale too. It's family drama
 
     cache = Cache(adapter=AsyncMemoryAdapter())
 
+    await cache.get_user("123")
+    await cache.get_post("123", "p1")
     await cache.invalidate(cache.t.users("123"))
-    # Invalidates users:123 and users:123:posts:*
+
+    await cache.primitives.set(
+        "stats:users",
+        stats,
+        tags=[("users",)],
+        ttl="5m",
+    )
     ```
   </TabItem>
 </Tabs>
 
-If you really want only the exact tag, TypeScript lets you do `cache.invalidate(tag, true)` or drop to primitives. Python will follow soon.
+That's the whole loop. Query, invalidate, repeat. The rest is just scale.

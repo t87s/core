@@ -1,0 +1,68 @@
+---
+title: Primitives
+description: The raw tools, the sharp edges
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Primitives are the axioms. Use them when you want full control over keys, tags, and when things are allowed to go stale.
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { createPrimitives, MemoryAdapter } from '@t87s/core';
+
+    const p = createPrimitives({
+      adapter: new MemoryAdapter(),
+      defaultTtl: '30s',
+      defaultGrace: '2m',
+    });
+
+    await p.query({
+      key: 'users:123',
+      tags: [['users', '123']],
+      fn: () => db.users.findById('123'),
+    });
+
+    await p.set('users:settings', settings, {
+      tags: [['users', 'settings']],
+      ttl: '10m',
+    });
+
+    const user = await p.get('users:123');
+    await p.invalidate([['users', '123']]);
+    await p.del('users:settings');
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from t87s import create_primitives
+    from t87s.adapters import AsyncMemoryAdapter
+
+    p = create_primitives(
+        adapter=AsyncMemoryAdapter(),
+        default_ttl="30s",
+        default_grace="2m",
+    )
+
+    await p.query(
+        key="users:123",
+        tags=[("users", "123")],
+        fn=lambda: db.users.find_by_id("123"),
+    )
+
+    await p.set(
+        "users:settings",
+        settings,
+        tags=[("users", "settings")],
+        ttl="10m",
+    )
+
+    user = await p.get("users:123")
+    await p.invalidate([("users", "123")])
+    await p.delete("users:settings")
+    ```
+  </TabItem>
+</Tabs>
+
+Tags do the real work. You can have wild and static at the same level, like users:123 and users:settings, and invalidating users:123 will never touch settings.

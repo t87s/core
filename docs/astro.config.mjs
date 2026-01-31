@@ -17,20 +17,23 @@ export default defineConfig({
         {
           label: 'Concepts',
           items: [
-            { label: 'Tags', slug: 'concepts/tags' },
+            { label: 'Cache', slug: 'concepts/cache' },
             { label: 'Prefix Matching', slug: 'concepts/prefix-matching' },
             { label: 'TTL', slug: 'concepts/ttl' },
             { label: 'Grace Periods', slug: 'concepts/grace-periods' },
+            { label: 'Adapters', slug: 'concepts/adapters' },
           ],
         },
+        { label: 'Primitives', slug: 'primitives' },
         {
-          label: 'Guides',
+          label: 'QueryCache',
           items: [
-            { label: 'Tag Design', slug: 'guides/tag-design' },
-            { label: 'Adapters', slug: 'guides/adapters' },
+            { label: 'Schema', slug: 'query-cache/schema' },
+            { label: 'Query Definitions', slug: 'query-cache/query-definitions' },
+            { label: 'Invalidations', slug: 'query-cache/invalidations' },
+            { label: 'Tutorial', slug: 'query-cache/tutorial' },
           ],
         },
-        { label: 'API Reference', slug: 'api/reference' },
         { label: 't87s Cloud', slug: 'cloud' },
       ],
     }),

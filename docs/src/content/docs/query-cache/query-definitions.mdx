@@ -1,11 +1,11 @@
 ---
-title: Grace Periods
-description: Stale data with a conscience
+title: Query Definitions
+description: Declare once, call forever
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Grace lets you serve stale data when the source is down. It's the difference between a hiccup and a public apology.
+Query definitions turn into methods. The cache key is derived from the method name plus its args, so you never have to hand-roll keys unless you want to.
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -15,12 +15,12 @@ Grace lets you serve stale data when the source is down. It's the difference bet
     const cache = QueryCache({
       schema: at('users', () => wild),
       adapter: new MemoryAdapter(),
-      defaultGrace: '2m',
+      defaultTtl: '1m',
+      defaultGrace: '5m',
+      verifyPercent: 0.1,
       queries: (tags) => ({
         getUser: (id: string) => ({
           tags: [tags.users(id)],
-          ttl: '30s',
-          grace: '10m',
           fn: () => db.users.findById(id),
         }),
       }),
@@ -44,18 +44,14 @@ Grace lets you serve stale data when the source is down. It's the difference bet
 
     cache = Cache(
         adapter=AsyncMemoryAdapter(),
-        default_grace="2m",
+        default_ttl="1m",
+        default_grace="5m",
+        verify_percent=0.1,
     )
 
-    await cache.primitives.query(
-        key="user:123",
-        tags=[("users", "123")],
-        fn=lambda: db.users.find_by_id("123"),
-        ttl="30s",
-        grace="10m",
-    )
+    await cache.get_user("123")
     ```
   </TabItem>
 </Tabs>
 
-When TTL expires, t87s tries to refresh. If refresh fails and the stale entry is still within grace, you get the old value and a background retry instead of a 500. It's boring in the best way.
+You can still drop to primitives when you need custom keys or a one-off cache path. QueryCache keeps the happy path short.
