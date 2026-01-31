@@ -56,7 +56,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## First Query
 
-This uses QueryCache because it's the happiest path. Primitives are just as powerful, just closer to the metal.
+t87s has two APIs: QueryCache and primitives. This quickstart uses the [QueryCache](/query-cache/schema/) API because it's pretty sweet, but in another world we could have started with [primitives](/primitives/) and you would have been an equally-happy reader.
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -72,7 +72,7 @@ This uses QueryCache because it's the happiest path. Primitives are just as powe
       adapter: new MemoryAdapter(),
       queries: (tags) => ({
         getUser: (id: string) => ({
-          tags: [tags.users(id)],
+          tags: tags.users(id)],
           fn: () => db.users.findById(id),
         }),
       }),
@@ -88,16 +88,16 @@ This uses QueryCache because it's the happiest path. Primitives are just as powe
     from t87s.adapters import AsyncMemoryAdapter
 
     class Tags(TagSchema):
-        users: Wild["Users"]
+        users: Wild"Users"]
 
     class Users(TagSchema):
-        settings: Wild[TagSchema]
-        posts: Wild["Posts"]
+        settings: WildTagSchema]
+        posts: Wild"Posts"]
 
     class Posts(TagSchema):
-        comments: Wild[TagSchema]
+        comments: WildTagSchema]
 
-    class Cache(QueryCache[Tags]):
+    class Cache(QueryCacheTags]):
         @cached(Tags.users())
         async def get_user(self, id: str):
             return await db.users.find_by_id(id)
