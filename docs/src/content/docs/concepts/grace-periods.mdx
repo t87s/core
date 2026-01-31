@@ -1,11 +1,13 @@
 ---
 title: Grace Periods
-description: Stale data with a conscience
+description: Stale-while-revalidate for resilience
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Grace lets you serve stale data when the source is down. It's the difference between a hiccup and a public apology.
+Grace periods let you serve stale data when the underlying source fails. Not unlike my middle-school lunch when New Jersey ran out of whatever crap they put between two pieces of "bread".
+
+## The Problem
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -15,18 +17,14 @@ Grace lets you serve stale data when the source is down. It's the difference bet
     const cache = QueryCache({
       schema: at('users', () => wild),
       adapter: new MemoryAdapter(),
-      defaultGrace: '2m',
       queries: (tags) => ({
         getUser: (id: string) => ({
           tags: [tags.users(id)],
-          ttl: '30s',
-          grace: '10m',
-          fn: () => db.users.findById(id),
+          ttl: '10m',
+          fn: () => db.users.findById(id), // What if DB is down?
         }),
       }),
     });
-
-    await cache.getUser('123');
     ```
   </TabItem>
   <TabItem label="Python">
@@ -38,24 +36,54 @@ Grace lets you serve stale data when the source is down. It's the difference bet
         users: Wild[TagSchema]
 
     class Cache(QueryCache[Tags]):
-        @cached(Tags.users())
+        @cached(Tags.users(), ttl="10m")
         async def get_user(self, id: str):
-            return await db.users.find_by_id(id)
+            return await db.users.find_by_id(id)  # What if DB is down?
 
-    cache = Cache(
-        adapter=AsyncMemoryAdapter(),
-        default_grace="2m",
-    )
-
-    await cache.primitives.query(
-        key="user:123",
-        tags=[("users", "123")],
-        fn=lambda: db.users.find_by_id("123"),
-        ttl="30s",
-        grace="10m",
-    )
+    cache = Cache(adapter=AsyncMemoryAdapter())
     ```
   </TabItem>
 </Tabs>
 
-When TTL expires, t87s tries to refresh. If refresh fails and the stale entry is still within grace, you get the old value and a background retry instead of a 500. It's boring in the best way.
+Without grace: if TTL expires and DB is down, users get an error, then a refund, then a lawsuit.
+
+## The Solution
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
+
+    const cache = QueryCache({
+      schema: at('users', () => wild),
+      adapter: new MemoryAdapter(),
+      queries: (tags) => ({
+        getUser: (id: string) => ({
+          tags: [tags.users(id)],
+          ttl: '10m',
+          grace: '6h', // Serve stale data for up to 6 hours if fn fails
+          fn: () => db.users.findById(id),
+        }),
+      }),
+    });
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    from t87s import QueryCache, TagSchema, Wild, cached
+    from t87s.adapters import AsyncMemoryAdapter
+
+    class Tags(TagSchema):
+        users: Wild[TagSchema]
+
+    class Cache(QueryCache[Tags]):
+        @cached(Tags.users(), ttl="10m", grace="6h")  # Serve stale for up to 6 hours if fn fails
+        async def get_user(self, id: str):
+            return await db.users.find_by_id(id)
+
+    cache = Cache(adapter=AsyncMemoryAdapter())
+    ```
+  </TabItem>
+</Tabs>
+
+With grace: when TTL expires, t87s tries to refresh. If that fails and we have stale data within the grace period, we hold our nose and serve the stale data while retrying in the background.
