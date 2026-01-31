@@ -5,9 +5,7 @@ description: How to tell the cache that something changed
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Here's the deal with caching: at some point, the cached data becomes wrong. The user updated their profile. An order shipped. A comment was deleted. When that happens, you need to tell the cache, or it'll keep serving the old data like nothing happened.
-
-This is invalidation, and it's the part of caching that people actually mess up. The fetching and storing is easy. The "knowing when to throw it away" is hard. t87s tries to make it less hard.
+Invalidation is the hard part of caching that people actually mess up. Except you, because you're reading these docs. It's easy to stash data away, but it's hard to know when the data is no-longer valid. There's no silver bullet, but t87s tries to remove as many footguns as possible. And if you use the [cloud adapter](/cloud/), the adaptive intelligence makes it such that you can turn your brain off (except that part that pays the t87s cloud bill) and let your LLM do the heavy lifting.
 
 ## Basic invalidation
 
