@@ -124,37 +124,6 @@ A few things are happening here:
 
 That's all, folks! Query, cache, invalidate, repeat. The cache handles all the fascinating parts—storing values, checking freshness, managing TTLs—so you can focus on the boring stuff, like profit.
 
-## Bonus: ad-hoc caching with primitives
-
-Sometimes you want to cache something that doesn't fit neatly into a query definition. Maybe it's a computed aggregate, or a value from an external API, or something you just want to stash temporarily.
-
-QueryCache exposes its underlying primitives for exactly this:
-
-<Tabs>
-  <TabItem label="TypeScript">
-    ```typescript
-    // Cache an arbitrary value with its own tags and TTL
-    await cache.primitives.set('stats:users', userStats, {
-      tags: [['users']],
-      ttl: '5m',
-    });
-    ```
-  </TabItem>
-  <TabItem label="Python">
-    ```python
-    # Cache an arbitrary value with its own tags and TTL
-    await cache.primitives.set(
-        "stats:users",
-        user_stats,
-        tags=[("users",)],
-        ttl="5m",
-    )
-    ```
-  </TabItem>
-</Tabs>
-
-When you invalidate `users`, this cached stat goes stale too—even though it wasn't defined as a query. That's the nice thing about tags: everything that shares a tag shares a fate.
-
 ## What's next
 
 If you want to understand the schema system better, read [Schema](/query-cache/schema/). If you want to know about TTL and grace periods, check [TTL](/concepts/ttl/) and [Grace Periods](/concepts/grace-periods/). And if you just want to ship something, honestly, you probably have enough to get started. The rest is details.
