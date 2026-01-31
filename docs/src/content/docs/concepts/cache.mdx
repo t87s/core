@@ -3,26 +3,14 @@ title: Cache
 description: The $440 million lesson you'd rather learn from someone else
 ---
 
-In 2010, Facebook went dark for hours. The cause? A cache invalidation bug. Their automated system tried to fix an invalid config value in cache, but the fix required a database query. Every client saw the bad value simultaneously. Every client tried to fix it simultaneously. Hundreds of thousands of queries per second hammered the database cluster until it collapsed. Facebook had to turn off the entire site to recover.
+Netflix serves 260 million subscribers across 190 countries. Their EVCache system handles 400 million operations per second across 22,000 servers. When a show like *Stranger Things* drops, they pre-warm the cache with predicted content keys hours before release. Result: 99.99% cache hit rate. Ten million people hit play, and the database barely notices.
+
+If Netflix didn't cache, every single one of those ten million requests would hit their database directly. The database would melt. The show would buffer. Twitter would explode with complaints. Instead, the cache absorbs the load, the stream starts instantly, and everyone's happy. This is why we cache.
+
+In 2010, Facebook went dark for hours. Unfortunately, it came back, but it was a hopeful moment for many of us. The cause? A cache invalidation bug. Their automated system tried to fix an invalid config value in cache, but the fix required a database query. Every client saw the bad value simultaneously. Every client tried to fix it simultaneously. Hundreds of thousands of queries per second hammered the database cluster until it collapsed. Facebook had to turn off the entire site to recover.
 
 This is what happens when caching goes wrong.
 
-## When caching goes right
+## To cache or not to cache?
 
-Netflix serves 260 million subscribers across 190 countries. Their EVCache system handles 400 million operations per second across 22,000 servers. When a show like *Stranger Things* drops, they pre-warm the cache with predicted content keys hours before release. Result: 99.99% cache hit rate. Ten million people hit play, and the database barely notices.
-
-Twitter learned their lessons the hard way too. Dan Luu documented [a decade of cache incidents](https://danluu.com/cache-incidents/) there—connection limits that caused cascading failures, hot shards that melted under load, the works. The pattern is consistent: when you design for cache, your database can't handle the traffic anymore. That's not a bug, that's the point. But it means cache failures become total outages.
-
-## The thundering herd
-
-Here's a scenario: your product page cache expires. At that exact moment, 500,000 requests arrive. Every single one sees the cache miss. Every single one hits your database. Your DB CPU spikes to 98%, response times balloon from 20ms to 4,500ms, checkout pages start timing out. An 8-minute outage that costs $10 million in lost sales.
-
-This is called a cache stampede, and it happens more often than anyone admits. The fix isn't complicated—stagger your expirations with jitter, use request coalescing so only one request actually rebuilds the cache—but you have to know it's a problem before you can solve it.
-
-## The deal
-
-Caching is a trade. You accept a little staleness in exchange for a lot of speed. The question isn't whether to cache—if you're reading this, you probably should. The question is: what's allowed to be stale, for how long, and what happens when the answer changes?
-
-t87s exists to make that trade explicit. You declare tags that describe your data's dependencies. When something changes, you invalidate the tags. The cache figures out what needs to go. You stop guessing and start sleeping through the night.
-
-The primitives are simple: TTL for the clock, tags for the relationships, grace periods for the edge cases. The rest is just putting them together in a way that matches how your data actually moves.
+Premature optimization is the root of all evil. So never start a project out with cache in mind. But at a certain point, things will just feel slow. Caching is the best optimization, and it's also the hardest. It's the best because the best way to optimize any program is not to run it. And it's the hardest because it's really tough to know when things change and when things stay the same. But they stay the same more than you'd think, and when this is the case, you're leaving oodles of speed on the table by not caching. So cache with reckless abandon. Your users will be happy, your cloud bill will be less, and yours truly will feel like he didn't waste time writing the paragraph you're reading.
