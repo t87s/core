@@ -75,4 +75,4 @@ The obvious answer is "when the data changes." But *where* you put that invalida
 
 **Consider side effects.** Sometimes updating one thing affects another. If updating a user's name should also invalidate their comments (because comments display the author name), make sure that invalidation happens. This is the part people forget.
 
-I've debugged more cache bugs that boil down to "we forgot to invalidate X when Y changed" than I care to admit. The fix is always obvious in retrospect, which makes it even more frustrating.
+I'm not going to insult your intelligence with even more AI-generated bullet points than the three you read above (jk, AI didn't generate them—it generated this paragraph though... joke's on you...). But hopefully you get the point—this is the hard part of caching. And the whole reason t87s was built is not because a lib magically fixes it, but because LLMs are so powerful that, fed the right data, they can [correct a cache based on historical data in near real-time](/cloud/#using-with-llms).
