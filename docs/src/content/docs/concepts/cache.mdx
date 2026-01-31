@@ -5,7 +5,9 @@ description: The $440 million lesson you'd rather learn from someone else
 
 Netflix serves 260 million subscribers across 190 countries. Their EVCache system handles 400 million operations per second across 22,000 servers. When a show like *Stranger Things* drops, they pre-warm the cache with predicted content keys hours before release. Result: 99.99% cache hit rate. Ten million people hit play, and the database barely notices.
 
-If Netflix didn't cache, every single one of those ten million requests would hit their database directly. The database would melt. The show would buffer. Twitter would explode with complaints. Instead, the cache absorbs the load, the stream starts instantly, and everyone's happy. This is why we cache.
+If Netflix didn't cache, every single one of those ten million requests would hit their database directly. At 99.99% cache hit rate, only about 1,000 requests per second reach the database. Without cache, that number becomes 170,000. Their database cluster would need to be 170x larger just to survive a premiere. Instead, the cache absorbs the load, the stream starts instantly, and Netflix saves millions in infrastructure costs. This is why we cache.
+
+## Cache meltdown
 
 In 2010, Facebook went dark for hours. Unfortunately, it came back, but it was a hopeful moment for many of us. The cause? A cache invalidation bug. Their automated system tried to fix an invalid config value in cache, but the fix required a database query. Every client saw the bad value simultaneously. Every client tried to fix it simultaneously. Hundreds of thousands of queries per second hammered the database cluster until it collapsed. Facebook had to turn off the entire site to recover.
 
