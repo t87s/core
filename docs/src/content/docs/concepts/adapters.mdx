@@ -1,52 +1,49 @@
 ---
 title: Adapters
-description: Choosing the right storage adapter
+description: Where your cache actually lives
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-t87s supports four adapters for different environments.
+An adapter is what connects t87s to your storage backend. It's the thing that actually reads and writes cache entries. You pick one based on your environment and requirements.
 
 ## MemoryAdapter
 
-For local development. Single-process, no persistence.
+The simplest option. Stores everything in process memory. No external dependencies, no network calls, zero configuration.
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
     import { MemoryAdapter } from '@t87s/core';
 
-    const t87s = new T87s({
-      adapter: new MemoryAdapter(),
-    });
+    const adapter = new MemoryAdapter();
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    from t87s import T87s, MemoryAdapter
+    from t87s.adapters import AsyncMemoryAdapter
 
-    t87s = T87s(adapter=MemoryAdapter())
+    adapter = AsyncMemoryAdapter()
     ```
   </TabItem>
 </Tabs>
 
+**Good for:** Local development, testing, single-process apps, or anywhere you don't need cache to persist across restarts.
+
+**Not good for:** Multi-process or multi-server deployments (each process has its own cache, they don't share), or situations where you need cache to survive a restart.
+
 ## RedisAdapter
 
-For self-hosted production. Requires Redis.
+The classic choice for production. Uses Redis as the storage backend, which means your cache is shared across all your servers and survives restarts.
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
     import { RedisAdapter } from '@t87s/core';
-    import { Redis } from '@upstash/redis';
+    import { Redis } from 'ioredis';
 
-    const t87s = new T87s({
-      adapter: new RedisAdapter({
-        client: new Redis({
-          url: process.env.UPSTASH_REDIS_REST_URL,
-          token: process.env.UPSTASH_REDIS_REST_TOKEN,
-        }),
-      }),
+    const adapter = new RedisAdapter({
+      client: new Redis(process.env.REDIS_URL),
     });
     ```
   </TabItem>
@@ -54,30 +51,31 @@ For self-hosted production. Requires Redis.
     ```python
     import os
     import redis
-    from t87s import T87s
-    from t87s.adapters.redis import RedisAdapter
+    from t87s.adapters import AsyncRedisAdapter
 
     # pip install t87s[redis]
     client = redis.Redis.from_url(os.environ["REDIS_URL"])
-    t87s = T87s(adapter=RedisAdapter(client))
+    adapter = AsyncRedisAdapter(client)
     ```
   </TabItem>
 </Tabs>
 
+**Good for:** Production deployments with multiple servers, cases where you need cache persistence, or when you're already running Redis anyway.
+
+**Not good for:** Situations where you don't want to manage Redis infrastructure, or when latency to Redis is high.
+
 ## UpstashAdapter
 
-If you're using Upstash, this adapter gives you a smoother DX than the Redis Adapter.
+If you're using Upstash's serverless Redis, this adapter is optimized for their HTTP-based API. It's similar to RedisAdapter but with better ergonomics for the Upstash ecosystem.
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
     import { UpstashAdapter } from '@t87s/core';
 
-    const t87s = new T87s({
-      adapter: new UpstashAdapter({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      }),
+    const adapter = new UpstashAdapter({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
     });
     ```
   </TabItem>
@@ -85,43 +83,53 @@ If you're using Upstash, this adapter gives you a smoother DX than the Redis Ada
     ```python
     import os
     from upstash_redis import Redis
-    from t87s import T87s
-    from t87s.adapters.upstash import UpstashAdapter
+    from t87s.adapters import AsyncUpstashAdapter
 
     # pip install t87s[upstash]
     client = Redis(
         url=os.environ["UPSTASH_REDIS_REST_URL"],
         token=os.environ["UPSTASH_REDIS_REST_TOKEN"],
     )
-    t87s = T87s(adapter=UpstashAdapter(client))
+    adapter = AsyncUpstashAdapter(client)
     ```
   </TabItem>
 </Tabs>
 
+**Good for:** Serverless environments (Vercel, Cloudflare Workers, etc.) where you can't run a persistent Redis connection, or when you want managed Redis without the ops burden.
+
 ## CloudAdapter
 
-Turnkey caching solution with a generous free tier. Fast, offers unmatched concurrency, provides real-time cache optimization with AI analysis.
+Our managed solution. Faster than self-hosted Redis for globally distributed apps, with built-in analytics and AI-powered TTL optimization. And yes, this is the sales pitch part of the docs, but it's also genuinely true.
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
     import { CloudAdapter } from '@t87s/core';
 
-    const t87s = new T87s({
-      adapter: new CloudAdapter({
-        apiKey: process.env.T87S_API_KEY,
-      }),
+    const adapter = new CloudAdapter({
+      apiKey: process.env.T87S_API_KEY,
     });
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
     import os
-    from t87s import T87s
-    from t87s.adapters.cloud import CloudAdapter
+    from t87s.adapters import AsyncCloudAdapter
 
     # pip install t87s[cloud]
-    t87s = T87s(adapter=CloudAdapter(api_key=os.environ["T87S_API_KEY"]))
+    adapter = AsyncCloudAdapter(api_key=os.environ["T87S_API_KEY"])
     ```
   </TabItem>
 </Tabs>
+
+**Good for:** When you want caching to Just Work™ without thinking about infrastructure, when you want analytics on your cache patterns, or when you're building something latency-sensitive and need edge caching.
+
+**Not good for:** Air-gapped environments, situations where you can't use external services, or if you just philosophically prefer self-hosting everything.
+
+Check out the [Cloud docs](/cloud/) for more details on what you get.
+
+## Switching adapters
+
+One nice thing about t87s: your application code doesn't care which adapter you use. The QueryCache API is the same regardless. You can develop with MemoryAdapter, test with MemoryAdapter, and switch to RedisAdapter or CloudAdapter in production by changing one line.
+
+This is intentional. We've seen too many caching libraries that tightly couple your business logic to a specific backend. If you ever need to migrate, you'll thank us.

@@ -1,11 +1,19 @@
 ---
 title: Grace Periods
-description: Stale data with a conscience
+description: What to do when the database is having a bad day
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Grace lets you serve stale data when the source is down. It's the difference between a hiccup and a public apology.
+Here's a situation: your cache entry expires, a request comes in, and t87s tries to refresh it. But the database is down. Or slow. Or returning errors. What happens?
+
+Without a grace period, the request fails. The user sees an error. Your ops team gets paged. Everyone has a bad day.
+
+With a grace period, t87s says: "Okay, this data is technically expired, but it's probably still useful. Let's serve it anyway while we try to fix things in the background."
+
+It's the difference between a graceful degradation and a full outage. The data might be a few minutes stale, but at least the page loads.
+
+## Setting grace periods
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -15,18 +23,16 @@ Grace lets you serve stale data when the source is down. It's the difference bet
     const cache = QueryCache({
       schema: at('users', () => wild),
       adapter: new MemoryAdapter(),
-      defaultGrace: '2m',
+      defaultGrace: '2m',  // keep stale data around for 2 minutes after expiry
       queries: (tags) => ({
         getUser: (id: string) => ({
           tags: [tags.users(id)],
           ttl: '30s',
-          grace: '10m',
+          grace: '10m',  // this one's really important, keep it longer
           fn: () => db.users.findById(id),
         }),
       }),
     });
-
-    await cache.getUser('123');
     ```
   </TabItem>
   <TabItem label="Python">
@@ -38,24 +44,37 @@ Grace lets you serve stale data when the source is down. It's the difference bet
         users: Wild[TagSchema]
 
     class Cache(QueryCache[Tags]):
-        @cached(Tags.users())
+        @cached(Tags.users(), ttl="30s", grace="10m")
         async def get_user(self, id: str):
             return await db.users.find_by_id(id)
 
     cache = Cache(
         adapter=AsyncMemoryAdapter(),
-        default_grace="2m",
-    )
-
-    await cache.primitives.query(
-        key="user:123",
-        tags=[("users", "123")],
-        fn=lambda: db.users.find_by_id("123"),
-        ttl="30s",
-        grace="10m",
+        default_grace="2m",  # keep stale data around for 2 minutes after expiry
     )
     ```
   </TabItem>
 </Tabs>
 
-When TTL expires, t87s tries to refresh. If refresh fails and the stale entry is still within grace, you get the old value and a background retry instead of a 500. It's boring in the best way.
+## How it works
+
+When TTL expires, t87s tries to refresh the data. If the refresh succeeds, great—you get fresh data. If it fails, t87s checks: is the stale data still within the grace period?
+
+If yes: serve the stale data, and maybe retry the refresh in the background.
+If no: propagate the error to the caller. The data is too old to trust.
+
+The grace period is essentially a "I'm okay with data up to this old if things go wrong" threshold.
+
+## When to use grace periods
+
+**Resilience against transient failures.** Databases hiccup. Networks flake. Third-party APIs have bad days. Grace periods smooth over these bumps without users noticing.
+
+**Background refresh.** Even when things are working fine, grace periods let you serve slightly stale data instantly while refreshing in the background. This is great for p99 latency.
+
+**Gradual rollouts.** If you're worried about thundering herds (everyone's cache expiring at once and slamming the database), grace periods give you breathing room.
+
+## When not to use them
+
+Grace periods aren't for everything. If your data absolutely must be fresh—financial transactions, security-sensitive operations, anything where "slightly stale" could mean "slightly wrong in a way that costs money"—you probably want errors to propagate instead of serving potentially incorrect data.
+
+For most CRUD apps, though, serving a profile that's 30 seconds out of date is vastly better than showing an error page. Your users will thank you by not sending angry support tickets.

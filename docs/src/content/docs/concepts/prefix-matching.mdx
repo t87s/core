@@ -1,11 +1,24 @@
 ---
 title: Prefix Matching
-description: Parents take the fall so children can be fast
+description: Invalidate a user, and their posts go with them
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-When you invalidate a tag, everything below it goes stale too. It's family drama, but useful.
+When you invalidate a tag in t87s, everything *under* that tag gets invalidated too. This is called prefix matching, and it's one of those features that seems obvious in retrospect but saves you a ton of manual bookkeeping.
+
+## How it works
+
+Let's say you have a user with posts, and each post has comments. Your tags might look like:
+
+```
+users:123
+users:123:posts:p1
+users:123:posts:p1:comments:c1
+users:123:posts:p2
+```
+
+When you invalidate `users:123`, all of those get invalidated. The user, their posts, their comments—everything. You don't have to remember every cache key you've ever used for this user. You just say "this user changed" and the cache handles the rest.
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -29,8 +42,8 @@ When you invalidate a tag, everything below it goes stale too. It's family drama
       }),
     });
 
+    // Invalidate user 123 and all their posts
     await cache.invalidate(cache.tags.users('123'));
-    // Invalidates users:123 and users:123:posts:*
     ```
   </TabItem>
   <TabItem label="Python">
@@ -55,10 +68,37 @@ When you invalidate a tag, everything below it goes stale too. It's family drama
 
     cache = Cache(adapter=AsyncMemoryAdapter())
 
+    # Invalidate user 123 and all their posts
     await cache.invalidate(cache.t.users("123"))
-    # Invalidates users:123 and users:123:posts:*
     ```
   </TabItem>
 </Tabs>
 
-If you really want only the exact tag, TypeScript lets you do `cache.invalidate(tag, true)` or drop to primitives. Python will follow soon.
+## Why this matters
+
+Consider the alternative: tracking every cache key you've ever created, and remembering to invalidate all of them when something changes. You'd need to maintain a mapping somewhere. You'd inevitably forget some keys. You'd have stale data bugs that are nightmares to debug.
+
+Prefix matching means you think in terms of *entities*, not cache keys. "The user changed" is a single invalidation call, regardless of how many related cache entries exist.
+
+## What if you don't want the cascade?
+
+Sometimes you update something that genuinely doesn't affect child entities. Maybe you changed a user's email, but their posts and comments don't display the email anywhere.
+
+In TypeScript, you can pass a second argument to invalidate only the exact tag:
+
+```typescript
+// Only invalidate users:123, NOT users:123:posts:*
+await cache.invalidate(cache.tags.users('123'), true);
+```
+
+Python support for exact invalidation is coming soon. For now, the cascade is the only option, which is honestly the safer default.
+
+## Designing for prefix matching
+
+When you're setting up your schema, think about what should cascade to what. A good heuristic: if entity B displays data from entity A, then B should be nested under A.
+
+Posts display the author's name? Nest posts under users.
+Comments display the post title? Nest comments under posts.
+Order line items reference product info? Nest line items under... actually, this one's tricky. You might want to nest under both orders and products, or use multiple tags.
+
+The point is: your tag hierarchy should reflect your data dependencies. When you change an entity, you want everything that *could* be affected to refresh. Prefix matching makes this automatic, as long as your schema reflects reality.

@@ -1,65 +1,103 @@
 ---
 title: TTL
-description: How long your cache gets to be right
+description: How long before the cache admits it might be wrong
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-TTL is Time To Live. It's how long a cache entry stays fresh before it expires and has to be recomputed.
+TTL stands for Time To Live. It's how long a cached value stays "fresh" before t87s considers it expired and fetches a new one.
+
+This is your first line of defense against stale data. Even if you forget to invalidate something (it happens to the best of us), TTL ensures the cache eventually refreshes itself. Think of it as a safety net with a timer.
+
+## Setting TTL
+
+You can set a default TTL for all queries, and override it for specific ones:
 
 <Tabs>
   <TabItem label="TypeScript">
     ```typescript
     import { QueryCache, at, wild, MemoryAdapter } from '@t87s/core';
 
-    const schema = at('users', () => wild);
-    const adapter = new MemoryAdapter();
-
     const cache = QueryCache({
-      schema,
-      adapter,
-      defaultTtl: '10m',
+      schema: at('users', () => wild),
+      adapter: new MemoryAdapter(),
+      defaultTtl: '10m',  // everything expires after 10 minutes by default
       queries: (tags) => ({
         getUser: (id: string) => ({
           tags: [tags.users(id)],
-          ttl: '2m',
+          ttl: '2m',  // but user data refreshes every 2 minutes
           fn: () => db.users.findById(id),
         }),
       }),
     });
 
+    // You can also set TTL when using primitives directly
     await cache.primitives.set('users:settings', settings, {
       tags: [['users', 'settings']],
-      ttl: '1h',
+      ttl: '1h',  // settings can be stale for an hour, we don't care
     });
     ```
   </TabItem>
   <TabItem label="Python">
     ```python
-    from t87s import QueryCache, TagSchema, Wild
+    from t87s import QueryCache, TagSchema, Wild, cached
     from t87s.adapters import AsyncMemoryAdapter
 
     class Tags(TagSchema):
         users: Wild[TagSchema]
 
     class Cache(QueryCache[Tags]):
-        pass
+        @cached(Tags.users(), ttl="2m")  # user data refreshes every 2 minutes
+        async def get_user(self, id: str):
+            return await db.users.find_by_id(id)
 
     cache = Cache(
         adapter=AsyncMemoryAdapter(),
-        default_ttl="10m",
+        default_ttl="10m",  # everything expires after 10 minutes by default
     )
 
+    # You can also set TTL when using primitives directly
     await cache.primitives.set(
         "users:settings",
         settings,
         tags=[("users", "settings")],
-        ttl="1h",
+        ttl="1h",  # settings can be stale for an hour, we don't care
     )
     ```
   </TabItem>
 </Tabs>
 
-We accept human strings like "30s", "5m", "2h", and "1d", plus raw milliseconds if you enjoy typing zeros.
+## Time format
 
-Short TTLs fit dashboards and sessions. Long TTLs fit config and content that sleeps more than it moves. If you forget to invalidate, TTL is the safety net that keeps your cache from lying forever.
+We accept human-readable strings because life is too short to count milliseconds:
+
+| Format | Meaning |
+|--------|---------|
+| `'30s'` | 30 seconds |
+| `'5m'` | 5 minutes |
+| `'2h'` | 2 hours |
+| `'1d'` | 1 day |
+
+You can also pass raw milliseconds if you enjoy typing zeros. No judgment. Okay, a little judgment.
+
+## Choosing a TTL
+
+There's no universal answer here—it depends on how stale your data is allowed to be. Some rules of thumb:
+
+**Short TTLs (seconds to minutes)** work well for data that changes frequently and where freshness matters. Dashboards, notifications, real-time feeds. Users notice if these are stale.
+
+**Long TTLs (hours to days)** work well for data that rarely changes or where staleness is acceptable. Configuration, feature flags, content that gets published once and then sits there. Users don't notice, and you save a lot of database calls.
+
+**Medium TTLs (5-30 minutes)** are a good default when you're not sure. They're short enough that truly stale data doesn't linger too long, but long enough that you get real caching benefits.
+
+If you're using t87s Cloud, the analytics can tell you which keys have high stale rates, which is a fancy way of saying "you should probably invalidate these more often or increase their TTL."
+
+## TTL vs. invalidation
+
+TTL and invalidation are complementary, not alternatives.
+
+**Invalidation** is for when you *know* something changed. User updated their profile? Invalidate their cache. It's immediate and precise.
+
+**TTL** is for when you *might* have missed something, or for data you don't control. Maybe an external API changed. Maybe another service updated a shared record. Maybe someone edited the database directly (please don't do this, but also we've all done this).
+
+The combination means you get fast updates when you're paying attention, and eventual consistency when you're not. Which is a pretty good deal, honestly.
