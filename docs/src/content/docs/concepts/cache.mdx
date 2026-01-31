@@ -9,14 +9,14 @@ If Netflix didn't cache, every single one of those ten million requests would hi
 
 Why does this matter? A cache read takes about 0.5ms—it's just a key-value lookup in memory. A database read takes 5-50ms because it has to parse your query, check permissions, possibly hit disk, and maintain ACID guarantees. That's 10-100x slower per request. Worse, databases are expensive to scale: they need replicas, consensus protocols, and persistent storage. A cache node is just RAM and a network card. Netflix's 22,000 cache servers cost a fraction of what 22,000 database nodes would cost—and they couldn't even build a database cluster that large if they tried.
 
-Instead, the cache absorbs the load, the stream starts instantly, and Netflix saves millions in infrastructure costs. This is why we cache.
+Instead, the cache absorbs the load, the stream starts instantly, you binge watch this month's most popular "How I Accidentally Joined a Cult" series, and Netflix saves millions in infrastructure costs. This is why we cache.
 
 ## Cache meltdown
 
 In 2010, Facebook went dark for hours. Unfortunately, it came back, but it was a hopeful moment for many of us. The cause? A cache invalidation bug. Their automated system tried to fix an invalid config value in cache, but the fix required a database query. Every client saw the bad value simultaneously. Every client tried to fix it simultaneously. Hundreds of thousands of queries per second hammered the database cluster until it collapsed. Facebook had to turn off the entire site to recover.
 
-This is what happens when caching goes wrong.
-
 ## To cache or not to cache?
 
-Premature optimization is the root of all evil. So never start a project out with cache in mind. But at a certain point, things will just feel slow. Caching is the best optimization, and it's also the hardest. It's the best because the easiest way to optimize any program is not to run it. And it's the hardest because it's really tough to know when things change and when things stay the same. But they stay the same more than you'd think, and when this is the case, you're leaving oodles of speed on the table by not caching. So cache with reckless abandon. Your users will be happy, your cloud bill will be less, and yours truly will feel like he didn't waste time writing the paragraph you're reading.
+Premature optimization is the root of all evil. So never start a project out with cache in mind. But at a certain point, things will just feel slow. Caching is the best optimization, and it's also the hardest. It's the best because the easiest way to optimize any program is not to run it. And it's the hardest because it's really tough to know when things change and when things stay the same.
+
+In caching, like in life, things stay the same more than you'd think. We remember change, but the humdrum of our daily lives and API calls is remarkably consistent for long periods of time. And when this is the case, you're leaving oodles of speed on the table by not caching. So cache with reckless abandon. Your users will be happy, your cloud bill will be less, and yours truly will feel like he didn't waste time writing the documentation you're reading.
