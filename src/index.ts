@@ -11,8 +11,15 @@ export {
   type WildBuilder,
   type AtNode,
   type WildNode,
+  type Wild,
 } from './schema.js';
-export type { TypedTag, TypedQueryDef, SchemaToTags } from './query-cache-types.js';
+export type {
+  TypedTag,
+  TypedQueryDef,
+  SchemaToTags,
+  QueryRecord,
+  QueriesToMethods,
+} from './query-cache-types.js';
 
 // =============================================================================
 // Primitives (escape hatch)
