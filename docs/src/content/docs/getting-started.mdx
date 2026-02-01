@@ -23,6 +23,11 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
     pnpm add @t87s/core
     ```
   </TabItem>
+  <TabItem label="deno">
+    ```typescript
+    import { QueryCache } from "npm:@t87s/core";
+    ```
+  </TabItem>
   <TabItem label="pip">
     ```bash
     pip install t87s
@@ -31,11 +36,6 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
   <TabItem label="uv">
     ```bash
     uv add t87s
-    ```
-  </TabItem>
-  <TabItem label="deno">
-    ```typescript
-    import { QueryCache } from "npm:@t87s/core";
     ```
   </TabItem>
   <TabItem label="snail">
@@ -56,7 +56,12 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 ## First Query
 
-t87s has two APIs: QueryCache and primitives. This quickstart uses the [QueryCache](/query-cache/schema/) API because it's pretty sweet, but in another world we could have started with [primitives](/primitives/) and you would have been an equally-happy reader.
+t87s has two APIs: QueryCache and primitives.
+
+1. QueryCache is a typed API that helps speed up application development with a pleasant DX. It attempts to remove more footguns than it causes.
+2. Primitives provide lower-level building blocks for custom caching solutions. QueryCache is built on top of it
+
+This quickstart uses the [QueryCache](/query-cache/schema/) API, but in another world we could have started with [primitives](/primitives/) and you would have been an equally-happy reader.
 
 <Tabs>
   <TabItem label="TypeScript">
@@ -110,4 +115,4 @@ t87s has two APIs: QueryCache and primitives. This quickstart uses the [QueryCac
   </TabItem>
 </Tabs>
 
-If you want the full tour, start with the [QueryCache tutorial](/query-cache/tutorial/), then circle back to [Primitives](/primitives/) when you want sharper tools.
+If you want the full tour, start with the [QueryCache tutorial](/query-cache/tutorial/), then circle back to [Primitives](/primitives/) if you feel that you or your human can build a better QueryCache. In that case, PRs are welcome!

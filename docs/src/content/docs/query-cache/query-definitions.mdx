@@ -5,9 +5,7 @@ description: The nice way to define cached queries
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Query definitions are how you tell QueryCache what data you want to cache and how it relates to your tags. You define them once, and then you get nice methods on your cache instance that handle all the caching machinery for you.
-
-The alternative is using [primitives](/primitives/) directly, which is more flexible but also more verbose. For most use cases, query definitions are the way to go.
+Query definitions are how you tell QueryCache what data you want to cache and how it relates to your tags. You define them once, and they become methods on your cache instance. They handle all the caching machinery for you.
 
 ## Defining queries
 
@@ -34,9 +32,9 @@ The alternative is using [primitives](/primitives/) directly, which is more flex
       }),
     });
 
-    // Now you have nice methods:
-    await cache.getUser('123');
-    await cache.getUserWithPosts('123');
+    // Now use those methods to...
+    await cache.getUser('123'); // get a user
+    await cache.getUserWithPosts('123'); // get their posts
     ```
   </TabItem>
   <TabItem label="Python">
@@ -62,43 +60,19 @@ The alternative is using [primitives](/primitives/) directly, which is more flex
         default_grace="5m",
     )
 
-    # Now you have nice methods:
-    await cache.get_user("123")
-    await cache.get_user_with_posts("123")
+    # Now use those methods do...
+    await cache.get_user("123") # get a user
+    await cache.get_user_with_posts("123") # get their posts
     ```
   </TabItem>
 </Tabs>
 
-## How keys are derived
+## Tag constructors
 
-One thing you might notice: you never specify a cache key. That's because QueryCache derives it automatically from the method name and arguments.
+Remember that [schema](/query-cache/schema/) you defined in the last section? It gets injected into your query constructor as a tag constructor, where anything that was marked wild becomes a function accepting a string.
 
-The format is `methodName:JSON.stringify(args)`. So `cache.getUser('123')` becomes `getUser:["123"]`. A multi-argument call like `cache.getPost('user1', 'post1')` becomes `getPost:["user1","post1"]`. You don't have to think about it, and you definitely don't have to hand-roll key strings and hope you spelled them consistently.
+Tag constructors are typesafe, meaning if you try to construct a tag that's not defined in your schema, your type checker will yell at you. If you try to pass anything other than a valid tag to a query, your type checker will yell at you. If you switch out t87s for another caching library, your type checker will yell at you. Basically, schemas generate tag constructors that allow you to feed tags to queries.
 
-This is the main quality-of-life improvement over primitives. No more `cache.get(\`user:\${id}\`)` scattered across your codebase, no more wondering if you used `user:` or `users:` or `user_` as your prefix.
+## What tags tell queries
 
-If you do need custom keys—maybe for debugging, or to match an existing cache scheme—that's what primitives are for. But for new code, the derived keys are almost always fine.
-
-## Configuration options
-
-You can set defaults at the cache level and override them per-query:
-
-| Option | What it does |
-|--------|--------------|
-| `defaultTtl` | How long entries stay fresh before expiring |
-| `defaultGrace` | How long to serve stale data if refresh fails |
-| `verifyPercent` | What percentage of requests should verify freshness (for t87s Cloud) |
-
-Individual queries can override `ttl` and `grace` when they need different behavior. A dashboard query might want a 10-second TTL, while a user profile might be fine with 5 minutes.
-
-## The function that fetches
-
-The `fn` in each query definition is the actual data-fetching function. It only runs on cache misses—when there's no cached value, or when the cached value has expired.
-
-A few things to keep in mind:
-
-**Keep it pure-ish.** The function should fetch data, not mutate it. Side effects in a cache-miss handler are a recipe for confusion.
-
-**Throw on errors.** If the fetch fails, let it throw. t87s will catch the error and, if there's a stale value within the grace period, serve that instead. If there's no grace fallback, the error propagates to the caller.
-
-**Keep it reasonably fast.** The whole point of caching is to avoid slow operations. If your `fn` is slow, that's fine—that's why you're caching it. But if it's slow *and* called frequently *and* you have a short TTL, you might want to rethink your configuration.
+As we'll see in the next section, you can invalidate a tag at any time. Any query that is marked with that tag, or any of its [descendants](/concepts/prefix-matching/), is invalidated.

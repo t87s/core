@@ -7,7 +7,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 Let's build a cache for a small app with users, posts, and comments. By the end of this page, you'll understand how QueryCache works, why the pieces fit together the way they do, and how to apply it to your own app.
 
-Unlike my normal sardonic, snarky tone peppered with dad-jokes that is more self-indulgent than useful, I've really tried here to make this tutorial friendly, approachable, and usable as soon as you're done walking through it. Let's get started.
+Unlike this documentation's sardonic, snarky tone peppered with self-indulgent dad jokes , we've really tried here to make this tutorial friendly, approachable, and usable as soon as you're done making your way through it. Let's get started.
 
 ## Step 1: Define your schema
 
@@ -40,8 +40,6 @@ The schema tells t87s what your tag hierarchy looks like. Think of it as a map o
 </Tabs>
 
 This says: there's a `users` namespace, and each user (that's what `wild` means—a dynamic ID) can have `posts`, and each post can have `comments`. When you invalidate a user, all their posts and comments go stale too. When you invalidate just a post, only that post and its comments go stale.
-
-If this feels like overkill for your app, it might be. But the moment you have nested data that changes independently—users with settings, orders with line items, threads with messages—you'll be glad the structure is there.
 
 ## Step 2: Create your cache
 
@@ -122,8 +120,8 @@ A few things are happening here:
   </TabItem>
 </Tabs>
 
-That's all, folks! Query, cache, invalidate, repeat. The cache handles all the fascinating parts—storing values, checking freshness, managing TTLs—so you can focus on the boring stuff, like profit.
+That's all, folks! Query, cache, invalidate, repeat. The cache handles all the fun parts—storing values, checking freshness, managing TTLs—so you can focus on the boring stuff, like profit.
 
 ## What's next
 
-If you want to understand the schema system better, read [Schema](/query-cache/schema/). If you want to know about TTL and grace periods, check [TTL](/concepts/ttl/) and [Grace Periods](/concepts/grace-periods/). And if you just want to ship something, honestly, you probably have enough to get started. The rest is details.
+If you want to understand the schema system better, check out [Schema](/query-cache/schema/). If you want to know about TTL and grace periods, check [TTL](/concepts/ttl/) and [Grace Periods](/concepts/grace-periods/). And if you just want to ship something, you have enough to get started. The rest is for what we call in Finnish "pilkunviilaaja". We'll let you ChatGPT that :)
