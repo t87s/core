@@ -58,52 +58,61 @@ key, invalidation_id, matched_tag, timestamp
 
 ### Example Queries
 
-Staleness by key.
+**Staleness by Key (24h)** — Shows cache keys ranked by verification sample count. "stale" = times the cached value differed from a fresh fetch. High `stale_pct` suggests TTL is too long or invalidation is missing.
 
 ```sql
 SELECT key, COUNT(*) as samples, SUM(is_stale) as stale,
        ROUND(SUM(is_stale) * 100.0 / COUNT(*), 1) as stale_pct
 FROM verifications
+WHERE timestamp > (strftime('%s', 'now') - 86400) * 1000
 GROUP BY key
 ORDER BY samples DESC
 LIMIT 100
 ```
 
-Potential issues.
+**Potential Issues** — Keys that may need attention: at least 10 samples AND >10% stale rate. These are candidates for shorter TTLs or adding invalidation triggers. Empty results = your cache is healthy!
 
 ```sql
 SELECT key, COUNT(*) as samples, SUM(is_stale) as stale,
        ROUND(SUM(is_stale) * 100.0 / COUNT(*), 1) as stale_pct
 FROM verifications
+WHERE timestamp > (strftime('%s', 'now') - 86400) * 1000
 GROUP BY key
 HAVING COUNT(*) >= 10 AND (SUM(is_stale) * 100.0 / COUNT(*)) > 10
 ORDER BY stale_pct DESC
 ```
 
-Operations by type.
+**Cache Hit Rate (24h)** — Cache performance breakdown: hits, misses, and sets. `hit_rate_pct` = hits / (hits + misses). Higher is better. Many misses? Check if invalidations are too aggressive.
 
 ```sql
-SELECT type, COUNT(*) as count
+SELECT
+  SUM(CASE WHEN type = 'hit' THEN 1 ELSE 0 END) as hits,
+  SUM(CASE WHEN type = 'miss' THEN 1 ELSE 0 END) as misses,
+  SUM(CASE WHEN type = 'set' THEN 1 ELSE 0 END) as sets,
+  ROUND(SUM(CASE WHEN type = 'hit' THEN 1 ELSE 0 END) * 100.0 /
+        NULLIF(SUM(CASE WHEN type IN ('hit', 'miss') THEN 1 ELSE 0 END), 0), 1) as hit_rate_pct
 FROM cache_operations
-GROUP BY type
+WHERE timestamp > (strftime('%s', 'now') - 86400) * 1000
 ```
 
-Recent invalidations.
+**Recent Invalidations** — Tag invalidations in the last 24 hours. "exact" = only that exact tag; false = prefix match (invalidates children). "affected_keys" = cache entries invalidated.
 
 ```sql
 SELECT i.tag, i.exact, datetime(i.timestamp/1000, 'unixepoch') as time,
        COUNT(inv.id) as affected_keys
 FROM invalidations i
 LEFT JOIN invalidated inv ON inv.invalidation_id = i.id
+WHERE i.timestamp > (strftime('%s', 'now') - 86400) * 1000
 GROUP BY i.id
 ORDER BY i.timestamp DESC
 LIMIT 50
 ```
 
-Blast radius.
+**Blast Radius (24h)** — Which invalidations affected the most cache entries? Large blast radius may indicate overly broad tags. Consider more specific tags to reduce unnecessary cache misses.
 
 ```sql
-SELECT i.tag, i.exact, COUNT(inv.id) as affected_keys
+SELECT i.tag, i.exact, datetime(i.timestamp/1000, 'unixepoch') as time,
+       COUNT(inv.id) as affected_keys
 FROM invalidations i
 LEFT JOIN invalidated inv ON inv.invalidation_id = i.id
 WHERE i.timestamp > (strftime('%s', 'now') - 86400) * 1000
@@ -112,7 +121,7 @@ ORDER BY affected_keys DESC
 LIMIT 20
 ```
 
-Hourly verifications.
+**Hourly Verifications** — Verification samples per hour (last 24 hours). Verifications randomly re-fetch to detect stale cache entries. Spikes in "stale" column indicate periods of cache inconsistency.
 
 ```sql
 SELECT strftime('%Y-%m-%d %H:00', timestamp/1000, 'unixepoch') as hour,
