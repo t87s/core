@@ -71,7 +71,7 @@ Query definitions are how you tell QueryCache what data you want to cache and ho
 
 Remember that [schema](/query-cache/schema/) you defined in the last section? It gets injected into your query constructor as a tag constructor, where anything that was marked wild becomes a function accepting a string.
 
-Tag constructors are typesafe, meaning if you try to construct a tag that's not defined in your schema, your type checker will yell at you. If you try to pass anything other than a valid tag to a query, your type checker will yell at you. If you switch out t87s for another caching library, your type checker will yell at you. Basically, schemas generate tag constructors that allow you to feed tags to queries.
+Tag constructors are typesafe, meaning if you try to construct a tag that's not defined in your schema, your type checker will yell at you. If you try to pass anything other than a valid tag to a query, your type checker will yell at you. If you abandon t87s for another caching library, your type checker will yell at you. Basically, schemas generate tag constructors that allow you to feed tags to queries.
 
 ## What tags tell queries
 
