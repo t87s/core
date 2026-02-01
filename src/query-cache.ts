@@ -79,6 +79,7 @@ export function QueryCache<Schema, Q extends QueryRecord>(
         fn: def.fn,
         ttl: def.ttl,
         grace: def.grace,
+        onRefresh: def.onRefresh,
       });
     };
   }

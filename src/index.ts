@@ -19,6 +19,7 @@ export type {
   SchemaToTags,
   QueryRecord,
   QueriesToMethods,
+  RefreshResult,
 } from './query-cache-types.js';
 
 // =============================================================================

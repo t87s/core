@@ -57,11 +57,18 @@ type TagBranch<Children> = [Children] extends [never]
 // Query Definition Types
 // =============================================================================
 
+export interface RefreshResult<T> {
+  old: T;
+  new: T;
+  changed: boolean;
+}
+
 export interface TypedQueryDef<T> {
   tags: TypedTag[];
   fn: () => Promise<T>;
   ttl?: string | number;
   grace?: string | number | false;
+  onRefresh?: (result: RefreshResult<T>) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic query factories require any

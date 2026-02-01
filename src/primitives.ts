@@ -15,12 +15,19 @@ export interface SetOptions {
   grace?: Duration | false;
 }
 
+export interface RefreshResult<T> {
+  old: T;
+  new: T;
+  changed: boolean;
+}
+
 export interface QueryOptions<T> {
   key: string;
   tags: string[][];
   fn: () => Promise<T>;
   ttl?: Duration;
   grace?: Duration | false;
+  onRefresh?: (result: RefreshResult<T>) => void;
 }
 
 export interface Primitives {
@@ -181,10 +188,34 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
     }
   }
 
-  function refreshInBackground<T>(cacheKey: string, queryOpts: QueryOptions<T>): void {
-    fetchAndCache(cacheKey, queryOpts).catch(() => {
-      // Ignore errors - graced value continues to be served
-    });
+  function refreshInBackground<T>(
+    cacheKey: string,
+    queryOpts: QueryOptions<T>,
+    staleValue: T
+  ): void {
+    fetchAndCache(cacheKey, queryOpts)
+      .then((freshValue) => {
+        const cachedHash = simpleHash(JSON.stringify(staleValue));
+        const freshHash = simpleHash(JSON.stringify(freshValue));
+        const changed = cachedHash !== freshHash;
+
+        // Report verification (SWR is 100% verification opportunity)
+        if (adapter.reportVerification) {
+          adapter.reportVerification(cacheKey, changed, cachedHash, freshHash).catch(() => {});
+        }
+
+        // Fire user callback
+        if (queryOpts.onRefresh) {
+          try {
+            queryOpts.onRefresh({ old: staleValue, new: freshValue, changed });
+          } catch {
+            // Swallow callback errors
+          }
+        }
+      })
+      .catch(() => {
+        // Ignore errors - graced value continues to be served
+      });
   }
 
   async function getOrFetch<T>(cacheKey: string, queryOpts: QueryOptions<T>): Promise<T> {
@@ -206,7 +237,7 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
       // Check grace period (SWR)
       if (cached.graceUntil !== null && cached.graceUntil > now) {
         // Stale but within grace - return stale, refresh in background
-        refreshInBackground(cacheKey, queryOpts);
+        refreshInBackground(cacheKey, queryOpts, cached.value);
         return cached.value;
       }
     }

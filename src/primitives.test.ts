@@ -394,5 +394,144 @@ describe('Primitives', () => {
 
       expect(fetchFn).toHaveBeenCalledTimes(2);
     });
+
+    describe('onRefresh callback', () => {
+      it('calls onRefresh during SWR with old, new, and changed=true when data differs', async () => {
+        const customPrimitives = createPrimitives({
+          adapter,
+          defaultTtl: 1, // 1ms
+          defaultGrace: 10000, // 10s grace
+        });
+
+        let counter = 0;
+        const fetchFn = vi.fn().mockImplementation(() => Promise.resolve({ count: ++counter }));
+        const onRefresh = vi.fn();
+
+        // Initial fetch
+        await customPrimitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          onRefresh,
+        });
+
+        await new Promise((r) => setTimeout(r, 10)); // Expire TTL but within grace
+
+        // This triggers SWR - returns stale, refreshes in background
+        await customPrimitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          onRefresh,
+        });
+
+        // Wait for background refresh to complete
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(onRefresh).toHaveBeenCalledWith({
+          old: { count: 1 },
+          new: { count: 2 },
+          changed: true,
+        });
+      });
+
+      it('calls onRefresh with changed=false when data is the same', async () => {
+        const customPrimitives = createPrimitives({
+          adapter,
+          defaultTtl: 1,
+          defaultGrace: 10000,
+        });
+
+        const fetchFn = vi.fn().mockResolvedValue({ constant: 'value' });
+        const onRefresh = vi.fn();
+
+        await customPrimitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          onRefresh,
+        });
+
+        await new Promise((r) => setTimeout(r, 10));
+
+        await customPrimitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          onRefresh,
+        });
+
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(onRefresh).toHaveBeenCalledWith({
+          old: { constant: 'value' },
+          new: { constant: 'value' },
+          changed: false,
+        });
+      });
+
+      it('swallows onRefresh callback errors', async () => {
+        const customPrimitives = createPrimitives({
+          adapter,
+          defaultTtl: 1,
+          defaultGrace: 10000,
+        });
+
+        let counter = 0;
+        const fetchFn = vi.fn().mockImplementation(() => Promise.resolve({ count: ++counter }));
+        const onRefresh = vi.fn().mockImplementation(() => {
+          throw new Error('Callback error');
+        });
+
+        await customPrimitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          onRefresh,
+        });
+
+        await new Promise((r) => setTimeout(r, 10));
+
+        // Should not throw
+        await customPrimitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          onRefresh,
+        });
+
+        await new Promise((r) => setTimeout(r, 50));
+
+        // Callback was called but error was swallowed
+        expect(onRefresh).toHaveBeenCalled();
+      });
+
+      it('does not call onRefresh on fresh hits', async () => {
+        const fetchFn = vi.fn().mockResolvedValue({ id: '1' });
+        const onRefresh = vi.fn();
+
+        await primitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          ttl: '1m',
+          onRefresh,
+        });
+
+        // Second call is a fresh hit (within TTL)
+        await primitives.query({
+          key: 'user:1',
+          tags: [['users', '1']],
+          fn: fetchFn,
+          ttl: '1m',
+          onRefresh,
+        });
+
+        await new Promise((r) => setTimeout(r, 50));
+
+        // onRefresh should not be called on fresh hits
+        expect(onRefresh).not.toHaveBeenCalled();
+      });
+    });
   });
 });
