@@ -10,6 +10,16 @@ export interface CacheEntry<T> {
 }
 
 /**
+ * Result from a query with cache metadata.
+ */
+export interface EntriesResult<T> {
+  /** The cache entry before this query (null if cache miss) */
+  before: CacheEntry<T> | null;
+  /** The cache entry after this query (always present) */
+  after: CacheEntry<T>;
+}
+
+/**
  * Storage adapter interface.
  */
 export interface StorageAdapter {
