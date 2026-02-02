@@ -187,7 +187,7 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
     cacheKey: string,
     queryOpts: QueryOptions<T>,
     staleEntry?: CacheEntry<T>
-  ): Promise<T> {
+  ): Promise<CacheEntry<T>> {
     const ttl = parseDuration(queryOpts.ttl ?? defaultTtl);
     const grace =
       queryOpts.grace === false || queryOpts.grace === undefined
@@ -207,11 +207,11 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
       };
 
       await adapter.set(cacheKey, entry);
-      return value;
+      return entry;
     } catch (error) {
       // Error handling with grace - return stale if available
       if (staleEntry && staleEntry.graceUntil !== null && staleEntry.graceUntil > now) {
-        return staleEntry.value;
+        return staleEntry;
       }
       throw error;
     }
