@@ -1,4 +1,4 @@
-import type { StorageAdapter, CacheEntry } from './types.js';
+import type { StorageAdapter, CacheEntry, EntriesResult, QueryPromise } from './types.js';
 import { parseDuration, type Duration } from './duration.js';
 
 export interface PrimitivesOptions {
@@ -59,6 +59,35 @@ function simpleHash(str: string): string {
     hash = (hash * 33) ^ str.charCodeAt(i);
   }
   return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * Create a QueryPromise that lazily executes either value or entries fetch.
+ */
+function _createQueryPromise<T>(
+  valueFn: () => Promise<T>,
+  entriesFn: () => Promise<EntriesResult<T>>
+): QueryPromise<T> {
+  let valuePromise: Promise<T> | null = null;
+  let entriesPromise: Promise<EntriesResult<T>> | null = null;
+
+  return {
+    then<TResult1 = T, TResult2 = never>(
+      onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ): PromiseLike<TResult1 | TResult2> {
+      if (!valuePromise) {
+        valuePromise = valueFn();
+      }
+      return valuePromise.then(onfulfilled, onrejected);
+    },
+    get entries(): PromiseLike<EntriesResult<T>> {
+      if (!entriesPromise) {
+        entriesPromise = entriesFn();
+      }
+      return entriesPromise;
+    },
+  };
 }
 
 /**
