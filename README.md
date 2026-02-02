@@ -28,6 +28,11 @@ const cache = QueryCache({
 
 await cache.getUser('123');
 await cache.invalidate(cache.tags.users('123'));
+
+// Access cache metadata via .entries
+const result = await cache.getUser('123').entries;
+console.log(result.before); // CacheEntry | null (null on miss)
+console.log(result.after); // CacheEntry (always present)
 ```
 
 If you want the raw tools:

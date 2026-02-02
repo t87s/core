@@ -1,4 +1,4 @@
-import type { StorageAdapter, CacheEntry } from './types.js';
+import type { StorageAdapter, CacheEntry, EntriesResult, QueryPromise } from './types.js';
 import { parseDuration, type Duration } from './duration.js';
 
 export interface PrimitivesOptions {
@@ -33,6 +33,8 @@ export interface QueryOptions<T> {
 export interface Primitives {
   /** Execute a cached query with stampede protection, TTL, grace/SWR, and verification. */
   query<T>(options: QueryOptions<T>): Promise<T>;
+  /** Execute a cached query and return cache metadata (before/after entries). */
+  queryWithEntries<T>(options: QueryOptions<T>): Promise<EntriesResult<T>>;
   /** Raw get - returns null if expired/invalidated. Escape hatch for full control. */
   get<T>(key: string): Promise<T | null>;
   /** Raw set. Escape hatch for full control. */
@@ -59,6 +61,35 @@ function simpleHash(str: string): string {
     hash = (hash * 33) ^ str.charCodeAt(i);
   }
   return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * Create a QueryPromise that lazily executes either value or entries fetch.
+ */
+export function createQueryPromise<T>(
+  valueFn: () => Promise<T>,
+  entriesFn: () => Promise<EntriesResult<T>>
+): QueryPromise<T> {
+  let valuePromise: Promise<T> | null = null;
+  let entriesPromise: Promise<EntriesResult<T>> | null = null;
+
+  return {
+    then<TResult1 = T, TResult2 = never>(
+      onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ): PromiseLike<TResult1 | TResult2> {
+      if (!valuePromise) {
+        valuePromise = valueFn();
+      }
+      return valuePromise.then(onfulfilled, onrejected);
+    },
+    get entries(): PromiseLike<EntriesResult<T>> {
+      if (!entriesPromise) {
+        entriesPromise = entriesFn();
+      }
+      return entriesPromise;
+    },
+  };
 }
 
 /**
@@ -158,7 +189,7 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
     cacheKey: string,
     queryOpts: QueryOptions<T>,
     staleEntry?: CacheEntry<T>
-  ): Promise<T> {
+  ): Promise<CacheEntry<T>> {
     const ttl = parseDuration(queryOpts.ttl ?? defaultTtl);
     const grace =
       queryOpts.grace === false || queryOpts.grace === undefined
@@ -178,11 +209,11 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
       };
 
       await adapter.set(cacheKey, entry);
-      return value;
+      return entry;
     } catch (error) {
       // Error handling with grace - return stale if available
       if (staleEntry && staleEntry.graceUntil !== null && staleEntry.graceUntil > now) {
-        return staleEntry.value;
+        return staleEntry;
       }
       throw error;
     }
@@ -194,7 +225,8 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
     staleValue: T
   ): void {
     fetchAndCache(cacheKey, queryOpts)
-      .then((freshValue) => {
+      .then((freshEntry) => {
+        const freshValue = freshEntry.value;
         const cachedHash = simpleHash(JSON.stringify(staleValue));
         const freshHash = simpleHash(JSON.stringify(freshValue));
         const changed = cachedHash !== freshHash;
@@ -219,6 +251,14 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
   }
 
   async function getOrFetch<T>(cacheKey: string, queryOpts: QueryOptions<T>): Promise<T> {
+    const result = await getOrFetchWithEntries(cacheKey, queryOpts);
+    return result.after.value;
+  }
+
+  async function getOrFetchWithEntries<T>(
+    cacheKey: string,
+    queryOpts: QueryOptions<T>
+  ): Promise<EntriesResult<T>> {
     const now = Date.now();
 
     // Check cache
@@ -231,19 +271,20 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
         if (shouldVerify()) {
           runVerification(cacheKey, queryOpts.fn, cached.value).catch(() => {});
         }
-        return cached.value;
+        return { before: cached, after: cached };
       }
 
       // Check grace period (SWR)
       if (cached.graceUntil !== null && cached.graceUntil > now) {
         // Stale but within grace - return stale, refresh in background
         refreshInBackground(cacheKey, queryOpts, cached.value);
-        return cached.value;
+        return { before: cached, after: cached };
       }
     }
 
     // Outside grace or no cache - fetch synchronously
-    return await fetchAndCache(cacheKey, queryOpts, cached ?? undefined);
+    const newEntry = await fetchAndCache(cacheKey, queryOpts, cached ?? undefined);
+    return { before: cached, after: newEntry };
   }
 
   // =========================================================================
@@ -262,6 +303,29 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
 
       const promise = getOrFetch<T>(cacheKey, queryOpts);
       inFlight.set(cacheKey, promise);
+
+      try {
+        return await promise;
+      } finally {
+        inFlight.delete(cacheKey);
+      }
+    },
+
+    async queryWithEntries<T>(queryOpts: QueryOptions<T>): Promise<EntriesResult<T>> {
+      const cacheKey = prefixKey(queryOpts.key);
+
+      // Stampede protection - check for in-flight request
+      const existing = inFlight.get(cacheKey);
+      if (existing) {
+        // Wait for existing, then re-fetch entries
+        await existing;
+      }
+
+      const promise = getOrFetchWithEntries<T>(cacheKey, queryOpts);
+      inFlight.set(
+        cacheKey,
+        promise.then((r) => r.after.value)
+      );
 
       try {
         return await promise;

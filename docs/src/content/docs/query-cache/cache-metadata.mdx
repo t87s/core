@@ -1,0 +1,191 @@
+---
+title: Cache Metadata
+description: Access cache state to determine hits, misses, and stale-while-revalidate
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Sometimes you need to know what actually happened when you queried the cache. Was it a hit? A miss? Did you get stale data while a fresh fetch runs in the background? The `.entries` property gives you this visibility.
+
+## The problem
+
+By default, queries just return your data:
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    const user = await cache.getUser('123');
+    // user is User, but was this from cache? Fresh? Stale?
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    user = await cache.get_user("123")
+    # user is User, but was this from cache? Fresh? Stale?
+    ```
+  </TabItem>
+</Tabs>
+
+This is usually fine. But sometimes you need to:
+
+- Show a "cached" indicator in your UI
+- Log cache performance metrics
+- Trigger different behavior for stale vs fresh data
+- Debug caching issues
+
+## The `.entries` property
+
+Every query has an `.entries` property that returns cache metadata instead of just the value:
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    const result = await cache.getUser('123').entries;
+
+    result.before  // CacheEntry<User> | null
+    result.after   // CacheEntry<User>
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    result = await cache.get_user("123").entries
+
+    result.before  # CacheEntry[User] | None
+    result.after   # CacheEntry[User]
+    ```
+  </TabItem>
+</Tabs>
+
+The `before` entry is the cache state *before* the query ran. The `after` entry is the cache state *after*. Together they tell you exactly what happened.
+
+## Interpreting the results
+
+### Cache miss
+
+```
+before = null
+after  = { value: ..., createdAt: now }
+```
+
+No cached entry existed. Fresh data was fetched and cached.
+
+### Cache hit (fresh)
+
+```
+before = { value: ..., createdAt: earlier }
+after  = same object as before
+```
+
+A valid cached entry existed and was returned. `before === after` (same reference).
+
+### Stale-while-revalidate
+
+```
+before = { value: ..., createdAt: earlier, expiresAt: past }
+after  = same object as before
+```
+
+The cached entry was expired but within grace period. Stale data was returned immediately while a background refresh runs. `before === after`.
+
+### Cache expired (no grace)
+
+```
+before = { value: old, createdAt: earlier }
+after  = { value: new, createdAt: now }
+```
+
+The cached entry was expired with no grace period, or outside grace. Fresh data was fetched synchronously. `before !== after`.
+
+## The CacheEntry type
+
+Each entry contains:
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    interface CacheEntry<T> {
+      value: T;           // The cached data
+      tags: Tag[];        // Tags for invalidation
+      createdAt: number;  // Unix timestamp (ms)
+      expiresAt: number;  // When TTL expires
+      graceUntil: number | null;  // When grace period ends
+    }
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    @dataclass
+    class CacheEntry(Generic[T]):
+        value: T              # The cached data
+        tags: list[Tag]       # Tags for invalidation
+        created_at: int       # Unix timestamp (ms)
+        expires_at: int       # When TTL expires
+        grace_until: int | None  # When grace period ends
+    ```
+  </TabItem>
+</Tabs>
+
+## Example: cache status indicator
+
+<Tabs>
+  <TabItem label="TypeScript">
+    ```typescript
+    async function getUserWithStatus(id: string) {
+      const result = await cache.getUser(id).entries;
+      const now = Date.now();
+
+      let status: 'miss' | 'hit' | 'stale';
+      if (result.before === null) {
+        status = 'miss';
+      } else if (result.after.expiresAt > now) {
+        status = 'hit';
+      } else {
+        status = 'stale';
+      }
+
+      return {
+        user: result.after.value,
+        cacheStatus: status,
+        cachedAt: new Date(result.after.createdAt),
+      };
+    }
+    ```
+  </TabItem>
+  <TabItem label="Python">
+    ```python
+    import time
+    from datetime import datetime
+
+    async def get_user_with_status(id: str):
+        result = await cache.get_user(id).entries
+        now = int(time.time() * 1000)
+
+        if result.before is None:
+            status = "miss"
+        elif result.after.expires_at > now:
+            status = "hit"
+        else:
+            status = "stale"
+
+        return {
+            "user": result.after.value,
+            "cache_status": status,
+            "cached_at": datetime.fromtimestamp(result.after.created_at / 1000),
+        }
+    ```
+  </TabItem>
+</Tabs>
+
+## When to use `.entries`
+
+Use `.entries` when you need cache visibility. Don't use it when you just want your data—the regular query is simpler and avoids allocating the result wrapper.
+
+```typescript
+// Just need the data? Use the regular query.
+const user = await cache.getUser('123');
+
+// Need cache metadata? Use .entries.
+const { before, after } = await cache.getUser('123').entries;
+```
+
+Both forms are efficient—`.entries` doesn't do extra work, it just exposes what was already computed.

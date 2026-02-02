@@ -1,5 +1,6 @@
 // src/query-cache-types.ts
 import type { AtNode, WildNode, AtBuilder, WildBuilder } from './schema.js';
+import type { QueryPromise } from './types.js';
 
 // =============================================================================
 // Tag Type
@@ -76,6 +77,6 @@ export type QueryRecord = Record<string, (...args: any[]) => TypedQueryDef<any>>
 
 export type QueriesToMethods<Q extends QueryRecord> = {
   readonly [K in keyof Q]: Q[K] extends (...args: infer A) => TypedQueryDef<infer T>
-    ? (...args: A) => Promise<T>
+    ? (...args: A) => QueryPromise<T>
     : never;
 };

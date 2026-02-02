@@ -10,6 +10,30 @@ export interface CacheEntry<T> {
 }
 
 /**
+ * Result from a query with cache metadata.
+ */
+export interface EntriesResult<T> {
+  /** The cache entry before this query (null if cache miss) */
+  before: CacheEntry<T> | null;
+  /** The cache entry after this query (always present) */
+  after: CacheEntry<T>;
+}
+
+/**
+ * A promise-like object that resolves to T, with an .entries accessor for cache metadata.
+ *
+ * @example
+ * ```typescript
+ * const user = await cache.getUser('123');           // T
+ * const result = await cache.getUser('123').entries; // EntriesResult<T>
+ * ```
+ */
+export interface QueryPromise<T> extends PromiseLike<T> {
+  /** Access cache metadata (before/after entries) */
+  readonly entries: PromiseLike<EntriesResult<T>>;
+}
+
+/**
  * Storage adapter interface.
  */
 export interface StorageAdapter {

@@ -19,6 +19,7 @@ export default defineConfig({
           items: [
             { label: 'Schema', slug: 'query-cache/schema' },
             { label: 'Query Definitions', slug: 'query-cache/query-definitions' },
+            { label: 'Cache Metadata', slug: 'query-cache/cache-metadata' },
             { label: 'Invalidations', slug: 'query-cache/invalidations' },
             { label: 'Tutorial', slug: 'query-cache/tutorial' },
           ],

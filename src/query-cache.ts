@@ -9,7 +9,7 @@ import type {
   TypedTag,
 } from './query-cache-types.js';
 import { createTagBuilder } from './tag-builder.js';
-import { createPrimitives, type Primitives } from './primitives.js';
+import { createPrimitives, createQueryPromise, type Primitives } from './primitives.js';
 
 export interface QueryCacheOptions<Schema, Q extends QueryRecord> {
   schema: Schema;
@@ -68,19 +68,24 @@ export function QueryCache<Schema, Q extends QueryRecord>(
 
   // Build query methods from the factory
   const queryDefs = options.queries(tags);
-  const methods: Record<string, (...args: unknown[]) => Promise<unknown>> = {};
+  const methods: Record<string, (...args: unknown[]) => unknown> = {};
 
   for (const [name, queryFn] of Object.entries(queryDefs)) {
-    methods[name] = async (...args: unknown[]) => {
+    methods[name] = (...args: unknown[]) => {
       const def = queryFn(...args) as TypedQueryDef<unknown>;
-      return primitives.query({
+      const queryOpts = {
         key: `${name}:${JSON.stringify(args)}`,
         tags: def.tags.map((t) => (t as TypedTag).__path),
         fn: def.fn,
         ttl: def.ttl,
         grace: def.grace,
         onRefresh: def.onRefresh,
-      });
+      };
+
+      return createQueryPromise(
+        () => primitives.query(queryOpts),
+        () => primitives.queryWithEntries(queryOpts)
+      );
     };
   }
 
