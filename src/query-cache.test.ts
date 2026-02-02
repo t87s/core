@@ -263,4 +263,60 @@ describe('QueryCache', () => {
       expect(cache.getPost).not.toBe(cache.listPosts);
     });
   });
+
+  describe('.entries access', () => {
+    it('allows direct await for value', async () => {
+      const cache = QueryCache({
+        schema: at('users', () => wild),
+        adapter: new MemoryAdapter(),
+        queries: (tags) => ({
+          getUser: (id: string) => ({
+            tags: [tags.users(id)],
+            fn: async () => ({ id, name: 'Test' }),
+          }),
+        }),
+      });
+
+      const user = await cache.getUser('123');
+      expect(user).toEqual({ id: '123', name: 'Test' });
+    });
+
+    it('allows .entries access for cache metadata', async () => {
+      const cache = QueryCache({
+        schema: at('users', () => wild),
+        adapter: new MemoryAdapter(),
+        queries: (tags) => ({
+          getUser: (id: string) => ({
+            tags: [tags.users(id)],
+            fn: async () => ({ id, name: 'Test' }),
+          }),
+        }),
+      });
+
+      const result = await cache.getUser('123').entries;
+      expect(result.before).toBeNull(); // First call is a miss
+      expect(result.after.value).toEqual({ id: '123', name: 'Test' });
+    });
+
+    it('returns same entry for fresh hit via .entries', async () => {
+      const cache = QueryCache({
+        schema: at('users', () => wild),
+        adapter: new MemoryAdapter(),
+        queries: (tags) => ({
+          getUser: (id: string) => ({
+            tags: [tags.users(id)],
+            fn: async () => ({ id, name: 'Test' }),
+          }),
+        }),
+      });
+
+      // Populate cache
+      await cache.getUser('123');
+
+      // Check entries
+      const result = await cache.getUser('123').entries;
+      expect(result.before).not.toBeNull();
+      expect(result.before).toBe(result.after);
+    });
+  });
 });
