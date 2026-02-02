@@ -33,6 +33,8 @@ export interface QueryOptions<T> {
 export interface Primitives {
   /** Execute a cached query with stampede protection, TTL, grace/SWR, and verification. */
   query<T>(options: QueryOptions<T>): Promise<T>;
+  /** Execute a cached query and return cache metadata (before/after entries). */
+  queryWithEntries<T>(options: QueryOptions<T>): Promise<EntriesResult<T>>;
   /** Raw get - returns null if expired/invalidated. Escape hatch for full control. */
   get<T>(key: string): Promise<T | null>;
   /** Raw set. Escape hatch for full control. */
@@ -64,7 +66,7 @@ function simpleHash(str: string): string {
 /**
  * Create a QueryPromise that lazily executes either value or entries fetch.
  */
-function _createQueryPromise<T>(
+export function createQueryPromise<T>(
   valueFn: () => Promise<T>,
   entriesFn: () => Promise<EntriesResult<T>>
 ): QueryPromise<T> {
@@ -301,6 +303,29 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
 
       const promise = getOrFetch<T>(cacheKey, queryOpts);
       inFlight.set(cacheKey, promise);
+
+      try {
+        return await promise;
+      } finally {
+        inFlight.delete(cacheKey);
+      }
+    },
+
+    async queryWithEntries<T>(queryOpts: QueryOptions<T>): Promise<EntriesResult<T>> {
+      const cacheKey = prefixKey(queryOpts.key);
+
+      // Stampede protection - check for in-flight request
+      const existing = inFlight.get(cacheKey);
+      if (existing) {
+        // Wait for existing, then re-fetch entries
+        await existing;
+      }
+
+      const promise = getOrFetchWithEntries<T>(cacheKey, queryOpts);
+      inFlight.set(
+        cacheKey,
+        promise.then((r) => r.after.value)
+      );
 
       try {
         return await promise;
