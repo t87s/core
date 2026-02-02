@@ -534,4 +534,67 @@ describe('Primitives', () => {
       });
     });
   });
+
+  describe('queryWithEntries', () => {
+    it('returns null before on cache miss', async () => {
+      const result = await primitives.queryWithEntries({
+        key: 'test',
+        tags: [['test']],
+        fn: async () => 'value',
+      });
+
+      expect(result.before).toBeNull();
+      expect(result.after.value).toBe('value');
+    });
+
+    it('returns same entry for before/after on fresh hit', async () => {
+      // First call - populates cache
+      await primitives.query({
+        key: 'test',
+        tags: [['test']],
+        fn: async () => 'value',
+      });
+
+      // Second call - should be a hit
+      const result = await primitives.queryWithEntries({
+        key: 'test',
+        tags: [['test']],
+        fn: async () => 'fresh',
+      });
+
+      expect(result.before).not.toBeNull();
+      expect(result.after).toBe(result.before);
+      expect(result.after.value).toBe('value');
+    });
+
+    it('returns different entries when cache expired and refetched', async () => {
+      const customPrimitives = createPrimitives({
+        adapter,
+        defaultTtl: 1,
+        defaultGrace: false,
+      });
+
+      // First call
+      await customPrimitives.query({
+        key: 'test',
+        tags: [['test']],
+        fn: async () => 'old',
+      });
+
+      // Wait for expiry
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      // Second call - should refetch
+      const result = await customPrimitives.queryWithEntries({
+        key: 'test',
+        tags: [['test']],
+        fn: async () => 'new',
+      });
+
+      expect(result.before).not.toBeNull();
+      expect(result.before?.value).toBe('old');
+      expect(result.after.value).toBe('new');
+      expect(result.after).not.toBe(result.before);
+    });
+  });
 });
