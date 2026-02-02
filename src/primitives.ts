@@ -223,7 +223,8 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
     staleValue: T
   ): void {
     fetchAndCache(cacheKey, queryOpts)
-      .then((freshValue) => {
+      .then((freshEntry) => {
+        const freshValue = freshEntry.value;
         const cachedHash = simpleHash(JSON.stringify(staleValue));
         const freshHash = simpleHash(JSON.stringify(freshValue));
         const changed = cachedHash !== freshHash;
@@ -248,6 +249,14 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
   }
 
   async function getOrFetch<T>(cacheKey: string, queryOpts: QueryOptions<T>): Promise<T> {
+    const result = await getOrFetchWithEntries(cacheKey, queryOpts);
+    return result.after.value;
+  }
+
+  async function getOrFetchWithEntries<T>(
+    cacheKey: string,
+    queryOpts: QueryOptions<T>
+  ): Promise<EntriesResult<T>> {
     const now = Date.now();
 
     // Check cache
@@ -260,19 +269,20 @@ export function createPrimitives(options: PrimitivesOptions): Primitives {
         if (shouldVerify()) {
           runVerification(cacheKey, queryOpts.fn, cached.value).catch(() => {});
         }
-        return cached.value;
+        return { before: cached, after: cached };
       }
 
       // Check grace period (SWR)
       if (cached.graceUntil !== null && cached.graceUntil > now) {
         // Stale but within grace - return stale, refresh in background
         refreshInBackground(cacheKey, queryOpts, cached.value);
-        return cached.value;
+        return { before: cached, after: cached };
       }
     }
 
     // Outside grace or no cache - fetch synchronously
-    return await fetchAndCache(cacheKey, queryOpts, cached ?? undefined);
+    const newEntry = await fetchAndCache(cacheKey, queryOpts, cached ?? undefined);
+    return { before: cached, after: newEntry };
   }
 
   // =========================================================================
