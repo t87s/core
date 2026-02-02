@@ -27,6 +27,7 @@ export type {
 // =============================================================================
 export {
   createPrimitives,
+  createQueryPromise,
   type Primitives,
   type PrimitivesOptions,
   type SetOptions,
@@ -50,7 +51,7 @@ export {
 // =============================================================================
 // Types
 // =============================================================================
-export type { CacheEntry, Duration, StorageAdapter } from './types.js';
+export type { CacheEntry, Duration, StorageAdapter, EntriesResult, QueryPromise } from './types.js';
 
 // =============================================================================
 // Utilities
